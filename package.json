@@ -1,0 +1,12 @@
+{
+  "name": "lc-dashboard",
+  "version": "1.0.0",
+  "description": "Lambda Capital Internal Dashboard",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx -y http-server -p 3000",
+    "dev": "npx -y http-server -p 3000"
+  },
+  "author": "Lambda Capital",
+  "license": "ISC"
+}

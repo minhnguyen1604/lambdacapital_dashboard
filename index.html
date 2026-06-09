@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LC Dashboard - Lambda Capital</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js for high-fidelity data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-section">
+        <div class="brand-logo-container">
+          <img src="lc_logo.jpg" alt="Lambda Capital Logo" class="brand-logo" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=&quot;color:#ff7a00;font-weight:bold;font-size:1.2rem;&quot;>Λ</span>'">
+        </div>
+        <div class="brand-name">Lambda Capital</div>
+      </div>
+      
+      <nav class="nav-menu">
+        <div class="nav-section-title">Danh mục</div>
+        
+        <!-- Forex Menu Item -->
+        <div>
+          <div class="nav-item" id="nav-forex" onclick="toggleNavGroup('forex-sub')">
+            <div class="nav-item-icon">
+              <!-- Dollar/Trending Icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+              <span>Forex</span>
+            </div>
+            <span class="nav-item-chevron">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+          </div>
+          
+          <div class="nav-sub-list" id="forex-sub">
+            <!-- Tài khoản quỹ -->
+            <div class="nav-sub-item" id="nav-taikhoanquy" onclick="toggleNavGroup('tkq-nested')">
+              <span>Tài khoản quỹ</span>
+              <span class="nav-item-chevron">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+            
+            <div class="nav-nested-list" id="tkq-nested">
+              <!-- FTMO -->
+              <div style="margin-bottom: 4px;">
+                <div class="nav-nested-item" style="font-weight: 600; color: var(--text-secondary); pointer-events: none; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                  <span style="display:inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--accent-orange);"></span>
+                  FTMO
+                </div>
+                <div style="padding-left: 10px; display: flex; flex-direction: column; gap: 2px;">
+                  <div class="nav-nested-item active" id="acc-ftmo-10k" onclick="switchAccount('ftmo-10k', 'Forex / Tài khoản quỹ / FTMO / 10k')">FTMO 10k</div>
+                  <div class="nav-nested-item" id="acc-ftmo-100k-1" onclick="switchAccount('ftmo-100k-1', 'Forex / Tài khoản quỹ / FTMO / 100k #1')">FTMO 100k #1</div>
+                  <div class="nav-nested-item" id="acc-ftmo-100k-2" onclick="switchAccount('ftmo-100k-2', 'Forex / Tài khoản quỹ / FTMO / 100k #2')">FTMO 100k #2</div>
+                  <div class="nav-nested-item" id="acc-ftmo-100k-3" onclick="switchAccount('ftmo-100k-3', 'Forex / Tài khoản quỹ / FTMO / 100k #3')">FTMO 100k #3</div>
+                  <div class="nav-nested-item" id="acc-ftmo-100k-4" onclick="switchAccount('ftmo-100k-4', 'Forex / Tài khoản quỹ / FTMO / 100k #4')">FTMO 100k #4</div>
+                </div>
+              </div>
+              
+              <!-- The5ers -->
+              <div>
+                <div class="nav-nested-item" style="font-weight: 600; color: var(--text-secondary); pointer-events: none; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                  <span style="display:inline-block; width: 4px; height: 4px; border-radius: 50%; background: #3b82f6;"></span>
+                  The5ers
+                </div>
+                <div style="padding-left: 10px; display: flex; flex-direction: column; gap: 2px;">
+                  <div class="nav-nested-item" id="acc-the5ers-5k" onclick="switchAccount('the5ers-5k', 'Forex / Tài khoản quỹ / The5ers / 5k')">The5ers 5k</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Chứng khoán Menu Item -->
+        <div class="nav-item" id="nav-stock" onclick="switchMainView('stock', 'Chứng khoán')">
+          <div class="nav-item-icon">
+            <!-- Bar Chart Icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            <span>Chứng khoán</span>
+          </div>
+        </div>
+        
+        <!-- Tổng hợp Menu Item -->
+        <div class="nav-item" id="nav-summary" onclick="switchMainView('summary', 'Tổng hợp')">
+          <div class="nav-item-icon">
+            <!-- Dashboard Icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="9"></rect>
+              <rect x="14" y="3" width="7" height="5"></rect>
+              <rect x="14" y="12" width="7" height="9"></rect>
+              <rect x="3" y="16" width="7" height="5"></rect>
+            </svg>
+            <span>Tổng hợp</span>
+          </div>
+        </div>
+      </nav>
+      
+      <!-- Footer brand note -->
+      <div style="padding: 16px 24px; border-top: 1px solid var(--border-glass); font-size: 0.75rem; color: var(--text-muted); text-align: center;">
+        LC Dashboard v1.0.0
+      </div>
+    </aside>
+    
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Content Header -->
+      <header class="content-header">
+        <div class="breadcrumbs">
+          <span>LC Dashboard</span>
+          <span class="breadcrumb-separator">/</span>
+          <span class="breadcrumb-active" id="current-breadcrumb-path">Forex / Tài khoản quỹ / FTMO / 10k</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="resetDefaultData()">
+            <!-- Reset Icon -->
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+            Reset Dữ Liệu
+          </button>
+          <button class="btn btn-primary" onclick="openAddTradeModal()" id="btn-add-trade-trigger">
+            <!-- Plus Icon -->
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Thêm Giao Dịch
+          </button>
+        </div>
+      </header>
+      
+      <!-- DYNAMIC CONTENT PORTAL -->
+      <div id="content-portal" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
+        
+        <!-- FOREEX / ACCOUNTS VIEW (Default) -->
+        <div id="view-forex-account" class="view-panel" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
+          
+          <!-- KPI Cards Grid -->
+          <section class="kpi-grid">
+            <!-- 1. Vốn ban đầu -->
+            <div class="kpi-card">
+              <span class="kpi-title">Vốn ban đầu</span>
+              <span class="kpi-value" id="kpi-initial-capital">$10,000.00</span>
+            </div>
+            
+            <!-- 2. Số dư tài khoản -->
+            <div class="kpi-card">
+              <span class="kpi-title">Số dư tài khoản</span>
+              <span class="kpi-value" id="kpi-balance">$10,201.67</span>
+            </div>
+            
+            <!-- 3. Lợi nhuận -->
+            <div class="kpi-card">
+              <span class="kpi-title">Lợi nhuận</span>
+              <span class="kpi-value positive" id="kpi-profit">+$201.67</span>
+            </div>
+            
+            <!-- 4. Số lệnh -->
+            <div class="kpi-card">
+              <span class="kpi-title">Số lệnh</span>
+              <span class="kpi-value" id="kpi-total-trades">1</span>
+            </div>
+            
+            <!-- 5. Số lệnh thắng -->
+            <div class="kpi-card">
+              <span class="kpi-title">Số lệnh thắng</span>
+              <span class="kpi-value positive" id="kpi-wins">1</span>
+            </div>
+            
+            <!-- 6. Số lệnh thua -->
+            <div class="kpi-card">
+              <span class="kpi-title">Số lệnh thua</span>
+              <span class="kpi-value negative" id="kpi-losses">0</span>
+            </div>
+            
+            <!-- 7. Winrate -->
+            <div class="kpi-card">
+              <span class="kpi-title">Winrate</span>
+              <span class="kpi-value" id="kpi-winrate">100%</span>
+            </div>
+            
+            <!-- 8. R:R -->
+            <div class="kpi-card">
+              <span class="kpi-title">R:R trung bình</span>
+              <span class="kpi-value" id="kpi-rr">1:2.0</span>
+            </div>
+            
+            <!-- 9. Lợi nhuận trung bình -->
+            <div class="kpi-card">
+              <span class="kpi-title">Lợi nhuận TB</span>
+              <span class="kpi-value positive" id="kpi-avg-win">+$201.67</span>
+            </div>
+            
+            <!-- 10. Khoản lỗ trung bình -->
+            <div class="kpi-card">
+              <span class="kpi-title">Khoản lỗ TB</span>
+              <span class="kpi-value negative" id="kpi-avg-loss">$0.00</span>
+            </div>
+            
+            <!-- 11. Kỳ vọng -->
+            <div class="kpi-card">
+              <span class="kpi-title">Kỳ vọng (Expectancy)</span>
+              <span class="kpi-value positive" id="kpi-expectancy">+$201.67</span>
+            </div>
+            
+            <!-- 12. Hệ số lợi nhuận -->
+            <div class="kpi-card">
+              <span class="kpi-title">Hệ số lợi nhuận</span>
+              <span class="kpi-value" id="kpi-profit-factor">N/A</span>
+            </div>
+          </section>
+          
+          <!-- Line Chart Section -->
+          <section class="chart-panel">
+            <h2 class="panel-title">Biểu đồ tăng trưởng Equity (Tháng này)</h2>
+            <div class="chart-container">
+              <canvas id="equityChart"></canvas>
+            </div>
+          </section>
+          
+          <!-- Trading Calendar Section -->
+          <section class="calendar-panel">
+            <div class="calendar-header">
+              <h2 class="panel-title">Lịch giao dịch chi tiết</h2>
+              <div class="calendar-nav">
+                <button class="calendar-nav-btn" onclick="adjustCalendarMonth(-1)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <span class="calendar-month-title" id="calendar-month-label">Tháng Sáu 2026</span>
+                <button class="calendar-nav-btn" onclick="adjustCalendarMonth(1)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;" onclick="goToToday()">Hôm nay</button>
+              </div>
+              <div class="calendar-stats">
+                <div class="calendar-stat-badge profit">
+                  <span>Số liệu thống kê hàng tháng:</span>
+                  <span id="cal-stat-profit" style="margin-left:4px;">$201.67</span>
+                </div>
+                <div class="calendar-stat-badge muted">
+                  <span>Ngày giao dịch:</span>
+                  <span id="cal-stat-days" style="margin-left:4px;">1</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="calendar-grid">
+              <div class="calendar-weekdays">
+                <div class="weekday">T2</div>
+                <div class="weekday">T3</div>
+                <div class="weekday">T4</div>
+                <div class="weekday">T5</div>
+                <div class="weekday">T6</div>
+                <div class="weekday">T7</div>
+                <div class="weekday">CN</div>
+              </div>
+              <div class="calendar-days" id="calendar-days-container">
+                <!-- Days will be dynamically generated by JS -->
+              </div>
+            </div>
+            <div class="calendar-footer-text">
+              Các giao dịch được thực hiện theo giờ nền tảng, có thể khác với múi giờ CE(S)T
+            </div>
+          </section>
+          
+        </div>
+        
+        <!-- STOCK VIEW (Under construction) -->
+        <div id="view-stock" class="view-panel" style="display: none; width: 100%;">
+          <div class="chart-panel empty-state">
+            <div class="empty-state-icon">📈</div>
+            <h2 class="empty-state-title">Danh mục Chứng khoán</h2>
+            <p style="color: var(--text-secondary); max-width: 480px; margin-bottom: 20px;">Hệ thống đang được kết nối với tài khoản chứng khoán của Lambda Capital. Dữ liệu sẽ được tự động đồng bộ hóa khi hệ thống giao dịch hoạt động.</p>
+            <button class="btn btn-secondary" onclick="switchAccount('ftmo-10k', 'Forex / Tài khoản quỹ / FTMO / 10k')">Quay lại Forex</button>
+          </div>
+        </div>
+        
+        <!-- GENERAL OVERVIEW SUMMARY VIEW -->
+        <div id="view-summary" class="view-panel" style="display: none; width: 100%;">
+          <div class="chart-panel" style="margin-bottom: 24px;">
+            <h2 class="panel-title" style="margin-bottom: 12px;">Tổng hợp tài khoản quỹ Forex</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px;">Báo cáo tổng hợp số dư và hiệu suất hoạt động trên toàn bộ các quỹ FTMO và The5ers của Lambda Capital.</p>
+            
+            <!-- Summary KPI Grid -->
+            <div class="kpi-grid" style="margin-bottom: 24px;">
+              <div class="kpi-card">
+                <span class="kpi-title">Tổng vốn ban đầu</span>
+                <span class="kpi-value" id="sum-initial-capital">$415,000.00</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-title">Tổng số dư tài khoản</span>
+                <span class="kpi-value" id="sum-balance">$417,450.00</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-title">Tổng lợi nhuận ròng</span>
+                <span class="kpi-value positive" id="sum-profit">+$2,450.00</span>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-title">Tổng số lệnh đã đi</span>
+                <span class="kpi-value" id="sum-total-trades">15</span>
+              </div>
+            </div>
+            
+            <!-- Accounts Performance Table -->
+            <h3 style="font-size: 1rem; font-weight:600; margin-bottom: 16px; display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent-orange);"></span>
+              Bảng theo dõi hiệu suất chi tiết các quỹ
+            </h3>
+            
+            <div style="overflow-x: auto; width: 100%; border-radius: var(--border-radius-md); border: 1px solid var(--border-glass);">
+              <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                <thead>
+                  <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-glass); color: var(--text-secondary);">
+                    <th style="padding: 14px 20px;">Tài khoản</th>
+                    <th style="padding: 14px 20px;">Vốn quỹ</th>
+                    <th style="padding: 14px 20px;">Số dư hiện tại</th>
+                    <th style="padding: 14px 20px;">Lợi nhuận ròng</th>
+                    <th style="padding: 14px 20px;">Winrate</th>
+                    <th style="padding: 14px 20px;">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="summary-table-body">
+                  <!-- Generated dynamically in JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Trade Glassmorphic Modal -->
+  <div class="modal-overlay" id="add-trade-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Ghi nhận giao dịch mới</h3>
+        <button class="modal-close" onclick="closeAddTradeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="add-trade-form" onsubmit="submitTradeForm(event)">
+          <div class="form-group">
+            <label class="form-label" for="trade-date">Ngày giao dịch</label>
+            <input type="date" id="trade-date" class="form-control" required>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="trade-symbol">Cặp tiền/Mã (Symbol)</label>
+              <input type="text" id="trade-symbol" class="form-control" placeholder="EURUSD" required style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="trade-direction">Chiều lệnh</label>
+              <select id="trade-direction" class="form-control">
+                <option value="BUY">BUY</option>
+                <option value="SELL">SELL</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="trade-amount">Lợi nhuận / Lỗ ($)</label>
+              <input type="number" id="trade-amount" class="form-control" step="0.01" placeholder="e.g. 150.50 hoặc -80.00" required>
+              <span style="font-size:0.75rem; color: var(--text-muted);">Sử dụng dấu âm (-) nếu là lệnh lỗ.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="trade-rr">Tỷ lệ Risk:Reward (R:R)</label>
+              <input type="number" id="trade-rr" class="form-control" step="0.1" min="0" placeholder="e.g. 2.0" required>
+            </div>
+          </div>
+          
+          <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="btn btn-secondary" onclick="closeAddTradeModal()">Hủy bỏ</button>
+            <button type="submit" class="btn btn-primary">Ghi nhận lệnh</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Toast Notification -->
+  <div class="toast" id="toast-notif">
+    <div id="toast-icon" style="font-size: 1.2rem;"></div>
+    <div id="toast-message" style="font-size: 0.9rem; font-weight: 500;"></div>
+  </div>
+
+  <!-- Main JavaScript App Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
