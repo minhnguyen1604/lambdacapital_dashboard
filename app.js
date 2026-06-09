@@ -174,15 +174,28 @@ function restartComingSoonAnimation() {
 }
 
 // --- Data Render Functions ---
-function renderApp() {
+async function renderApp() {
   if (activeView !== 'forex-account' || currentAccountId !== 'ftmo-10k') return;
   
   try {
-    // Load trades directly from embedded static data — no server needed
-    if (typeof FTMO_10K_TRADES === 'undefined') {
-      throw new Error('Trade data not loaded');
+    let trades = [];
+    if (window.location.protocol !== 'file:') {
+      try {
+        const res = await fetch(`/api/trades?account=ftmo-10k`);
+        if (res.ok) {
+          trades = await res.json();
+        } else {
+          trades = typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
+        }
+      } catch (e) {
+        console.warn("Could not fetch trades from server API, falling back to static embedded data:", e);
+        trades = typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
+      }
+    } else {
+      trades = typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
     }
-    currentAccountTrades = FTMO_10K_TRADES;
+    
+    currentAccountTrades = trades;
     
     // Init date range display
     initDateRangePanel();
