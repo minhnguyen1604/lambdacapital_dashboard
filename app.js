@@ -20,7 +20,8 @@ let activeView = 'forex-account'; // 'forex-account', 'stock', 'summary'
 let activeCalendarDate = new Date('2026-06-01'); // Year/Month view state
 let chartInstance = null;
 let currentAccountTrades = [];
-let activeHeaderTimeFilter = 'all';
+let dateRangeStart = null; // null = no start constraint
+let dateRangeEnd = null;   // null = no end constraint
 
 // --- App Initializer ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -174,8 +175,8 @@ async function renderApp() {
     }
     currentAccountTrades = await response.json();
     
-    // Populate header time filter options dynamically
-    populateHeaderTimeFilterOptions();
+    // Init date range display
+    initDateRangePanel();
     
     // Render the filtered state
     renderAppFiltered();
@@ -185,109 +186,113 @@ async function renderApp() {
   }
 }
 
-function populateHeaderTimeFilterOptions() {
-  const menu = document.getElementById('filter-dropdown-menu');
-  if (!menu) return;
-  
-  menu.innerHTML = '';
-  
-  // Add "All Time" Option
-  const allOpt = document.createElement('div');
-  allOpt.className = 'dropdown-item' + (activeHeaderTimeFilter === 'all' ? ' active' : '');
-  allOpt.innerText = 'All Time';
-  allOpt.onclick = (e) => {
-    e.stopPropagation();
-    selectHeaderTimeFilter('all');
-  };
-  menu.appendChild(allOpt);
-  
-  // Find the oldest trade date
-  let oldestDate = new Date(SYSTEM_DATE);
-  currentAccountTrades.forEach(t => {
-    if (t.date) {
-      const d = new Date(t.date);
-      if (!isNaN(d.getTime()) && d < oldestDate) {
-        oldestDate = d;
-      }
-    }
-  });
-  
-  const startYear = oldestDate.getFullYear();
-  const startMonth = oldestDate.getMonth();
-  
-  const endYear = SYSTEM_DATE.getFullYear();
-  const endMonth = SYSTEM_DATE.getMonth();
-  
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  
-  let y = endYear;
-  let m = endMonth;
-  
-  while (y > startYear || (y === startYear && m >= startMonth)) {
-    const monthStr = String(m + 1).padStart(2, '0');
-    const value = `${y}-${monthStr}`;
-    const label = `${monthNames[m]} ${y}`;
-    
-    const opt = document.createElement('div');
-    opt.className = 'dropdown-item' + (activeHeaderTimeFilter === value ? ' active' : '');
-    opt.innerText = label;
-    const currentVal = value;
-    opt.onclick = (e) => {
-      e.stopPropagation();
-      selectHeaderTimeFilter(currentVal);
-    };
-    menu.appendChild(opt);
-    
-    m--;
-    if (m < 0) {
-      m = 11;
-      y--;
-    }
-  }
+// --- Date Range Picker Logic ---
+
+function initDateRangePanel() {
+  // Set default max for end to today
+  const today = SYSTEM_DATE.toISOString().split('T')[0];
+  const startEl = document.getElementById('date-range-start');
+  const endEl = document.getElementById('date-range-end');
+  if (startEl) startEl.max = today;
+  if (endEl) { endEl.max = today; endEl.value = today; }
+  updateDateRangeDisplay();
 }
 
 function toggleFilterDropdown(event) {
   event.stopPropagation();
   const menu = document.getElementById('filter-dropdown-menu');
+  const trigger = document.getElementById('filter-dropdown-trigger');
   if (menu) {
-    menu.classList.toggle('show');
+    const isOpen = menu.classList.toggle('show');
+    if (trigger) trigger.classList.toggle('open', isOpen);
   }
 }
 
-function selectHeaderTimeFilter(value) {
-  activeHeaderTimeFilter = value;
-  
-  // Collapse dropdown
+// Close panel on outside click
+document.addEventListener('click', (e) => {
   const menu = document.getElementById('filter-dropdown-menu');
-  if (menu) {
+  const trigger = document.getElementById('filter-dropdown-trigger');
+  if (menu && !menu.contains(e.target) && trigger && !trigger.contains(e.target)) {
     menu.classList.remove('show');
+    if (trigger) trigger.classList.remove('open');
+  }
+});
+
+function applyDatePreset(preset, event) {
+  event.stopPropagation();
+  const today = new Date(SYSTEM_DATE);
+  const todayStr = today.toISOString().split('T')[0];
+  const startEl = document.getElementById('date-range-start');
+  const endEl = document.getElementById('date-range-end');
+  
+  // Remove active from all presets
+  document.querySelectorAll('.date-preset-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  if (preset === 'all') {
+    dateRangeStart = null;
+    dateRangeEnd = null;
+    if (startEl) startEl.value = '';
+    if (endEl) endEl.value = todayStr;
+  } else {
+    if (endEl) endEl.value = todayStr;
+    dateRangeEnd = today;
+    const start = new Date(today);
+    if (preset === '1m') start.setMonth(start.getMonth() - 1);
+    else if (preset === '3m') start.setMonth(start.getMonth() - 3);
+    else if (preset === '6m') start.setMonth(start.getMonth() - 6);
+    else if (preset === 'ytd') start.setMonth(0, 1);
+    dateRangeStart = start;
+    if (startEl) startEl.value = start.toISOString().split('T')[0];
   }
   
-  // Update dropdown highlighted items
-  populateHeaderTimeFilterOptions();
-  
-  // Render stats
+  updateDateRangeDisplay();
   renderAppFiltered();
 }
 
-// Global click event to close custom dropdown menu on outside clicks
-document.addEventListener('click', () => {
-  const menu = document.getElementById('filter-dropdown-menu');
-  if (menu) {
-    menu.classList.remove('show');
+function onDateRangeChange() {
+  const startEl = document.getElementById('date-range-start');
+  const endEl = document.getElementById('date-range-end');
+  dateRangeStart = startEl && startEl.value ? new Date(startEl.value + 'T00:00:00') : null;
+  dateRangeEnd = endEl && endEl.value ? new Date(endEl.value + 'T23:59:59') : null;
+  
+  // Clear preset active states when manually selecting dates
+  document.querySelectorAll('.date-preset-btn').forEach(b => b.classList.remove('active'));
+  
+  updateDateRangeDisplay();
+  renderAppFiltered();
+}
+
+function updateDateRangeDisplay() {
+  const label = document.getElementById('date-range-display');
+  if (!label) return;
+  if (!dateRangeStart && !dateRangeEnd) {
+    label.textContent = 'All Time';
+    return;
   }
-});
+  const fmt = (d) => d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '...';
+  if (!dateRangeStart) {
+    label.textContent = `Until ${fmt(dateRangeEnd)}`;
+  } else if (!dateRangeEnd) {
+    label.textContent = `From ${fmt(dateRangeStart)}`;
+  } else {
+    label.textContent = `${fmt(dateRangeStart)} – ${fmt(dateRangeEnd)}`;
+  }
+}
 
 function renderAppFiltered() {
   if (activeView !== 'forex-account') return;
   const config = ACCOUNTS_CONFIG[currentAccountId];
   
-  // Filter trades based on selection
+  // Filter trades by date range
   let filteredTrades = currentAccountTrades;
-  if (activeHeaderTimeFilter !== 'all') {
+  if (dateRangeStart || dateRangeEnd) {
     filteredTrades = currentAccountTrades.filter(t => {
       if (!t.date) return false;
-      return t.date.startsWith(activeHeaderTimeFilter);
+      const d = new Date(t.date);
+      if (dateRangeStart && d < dateRangeStart) return false;
+      if (dateRangeEnd && d > dateRangeEnd) return false;
+      return true;
     });
   }
   

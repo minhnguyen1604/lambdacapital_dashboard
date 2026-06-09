@@ -335,32 +335,57 @@ body {
   transition: var(--transition-normal);
 }
 
-/* Sidebar Collapsible Layout */
+/* Sidebar Collapsible Layout - Elegant Edge Tab */
 .sidebar-toggle-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
+  display: none; /* hidden - replaced by edge tab */
+}
+
+/* Elegant sidebar edge tab that sits on the right edge of the sidebar */
+.sidebar-edge-tab {
+  position: absolute;
+  right: -13px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  width: 26px;
+  height: 56px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 0 12px 12px 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--border-radius-md);
-  transition: var(--transition-fast);
+  cursor: pointer;
+  box-shadow: 3px 0 12px rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  color: var(--text-muted);
 }
 
-.sidebar-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: var(--text-primary);
+.sidebar:hover .sidebar-edge-tab,
+.sidebar-edge-tab:focus {
+  opacity: 1;
 }
 
-.sidebar-toggle-btn:active {
-  transform: scale(0.95);
+.sidebar-edge-tab:hover {
+  background: var(--accent-orange);
+  color: white;
+  border-color: var(--accent-orange);
+  box-shadow: 3px 0 16px rgba(255, 122, 0, 0.25);
+  opacity: 1;
 }
 
-.sidebar-toggle-btn svg {
-  transition: var(--transition-fast);
+.sidebar-edge-tab:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.sidebar-edge-icon {
+  transition: transform 0.3s ease;
+}
+
+/* Flip arrow when collapsed */
+.sidebar-collapsed .sidebar-edge-tab .sidebar-edge-icon {
+  transform: rotate(180deg);
 }
 
 .sidebar-collapsed .sidebar {
@@ -742,55 +767,200 @@ body {
   background: #ffffff;
 }
 
+/* Old dropdown (kept for reference but replaced by date-range-panel) */
 .custom-dropdown-menu {
   opacity: 0;
   transform: translateY(-8px);
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .custom-dropdown-menu.show {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
 }
 
-.dropdown-item {
-  padding: 10px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-radius: 8px;
-  cursor: pointer;
+/* ===== PREMIUM DATE RANGE PICKER ===== */
+
+/* Trigger pill button */
+.date-range-trigger {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: all 0.15s ease;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 50px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
 }
 
-.dropdown-item:hover {
-  background: rgba(0, 0, 0, 0.03);
+.date-range-trigger:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--accent-orange);
+  color: var(--accent-orange-text);
+  box-shadow: 0 4px 16px rgba(255, 122, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.date-range-trigger:hover svg {
+  stroke: var(--accent-orange);
+}
+
+.date-range-label {
   color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
 }
 
-.dropdown-item.active {
-  background: var(--success-glow);
-  color: var(--success-text);
+.date-range-chevron {
+  opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+
+.date-range-trigger.open .date-range-chevron {
+  transform: rotate(180deg);
+}
+
+/* Floating date range panel */
+.date-range-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.1), 0 2px 8px rgba(0,0,0,0.04);
+  padding: 20px;
+  min-width: 320px;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.date-range-panel.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.date-range-panel-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* From / To inputs row */
+.date-range-inputs {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.date-input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.date-input-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.date-input-field {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  border-radius: 10px;
+  background: rgba(244, 244, 246, 0.6);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+
+.date-input-field:focus {
+  border-color: var(--accent-orange);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.08);
+}
+
+.date-input-field:hover {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: white;
+}
+
+.date-range-arrow {
+  color: var(--text-muted);
+  padding-bottom: 10px;
+  flex-shrink: 0;
+}
+
+/* Quick preset buttons */
+.date-range-presets {
+  display: flex;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.date-preset-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 8px;
+  background: rgba(244, 244, 246, 0.5);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 0.02em;
+}
+
+.date-preset-btn:hover {
+  border-color: var(--accent-orange);
+  color: var(--accent-orange-text);
+  background: rgba(255, 122, 0, 0.04);
+}
+
+.date-preset-btn.active {
+  background: linear-gradient(135deg, var(--accent-orange), #e06c00);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 3px 10px rgba(255, 122, 0, 0.25);
 }
 
 #filter-dropdown-trigger {
-  background: rgba(255, 255, 255, 0.6) !important;
-  border: 1px solid var(--border-glass) !important;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.07);
   transition: var(--transition-fast);
-}
-
-#filter-dropdown-trigger:hover {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(0, 0, 0, 0.12) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
 #filter-dropdown-trigger:active {
