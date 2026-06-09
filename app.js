@@ -162,18 +162,15 @@ function restartComingSoonAnimation() {
 }
 
 // --- Data Render Functions ---
-async function renderApp() {
+function renderApp() {
   if (activeView !== 'forex-account' || currentAccountId !== 'ftmo-10k') return;
   
-  const config = ACCOUNTS_CONFIG[currentAccountId];
-  
   try {
-    // Fetch trades from the SQLite server API
-    const response = await fetch(`/api/trades?account=${currentAccountId}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Load trades directly from embedded static data — no server needed
+    if (typeof FTMO_10K_TRADES === 'undefined') {
+      throw new Error('Trade data not loaded');
     }
-    currentAccountTrades = await response.json();
+    currentAccountTrades = FTMO_10K_TRADES;
     
     // Init date range display
     initDateRangePanel();
@@ -181,8 +178,8 @@ async function renderApp() {
     // Render the filtered state
     renderAppFiltered();
   } catch (err) {
-    console.error("Error loading account data from SQLite:", err);
-    showToast("Could not connect to SQLite database!", "error");
+    console.error("Error loading trade data:", err);
+    showToast("Lỗi tải dữ liệu giao dịch!", "error");
   }
 }
 
