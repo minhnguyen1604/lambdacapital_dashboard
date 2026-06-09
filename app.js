@@ -419,9 +419,9 @@ function renderCapitalChart(trades) {
           suggestedMin: initialCapital - (initialCapital * 0.02),
           suggestedMax: initialCapital + (initialCapital * 0.02),
           grid: {
-            // Draw a bold red dashed zero-line to clearly demarcate the initial capital threshold
+            // Draw a faint gray dashed threshold line to clearly demarcate the initial capital
             color: function(context) {
-              return context.tick.value === initialCapital ? '#e11d48' : 'rgba(0, 0, 0, 0.02)';
+              return context.tick.value === initialCapital ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.02)';
             },
             lineWidth: function(context) {
               return context.tick.value === initialCapital ? 2 : 1;
@@ -507,21 +507,23 @@ function renderCalendar(trades) {
   
   // Update Calendar Header stats
   const statProfitEl = document.getElementById('cal-stat-profit');
-  statProfitEl.innerText = (monthNetProfit >= 0 ? '+' : '') + formatCurrency(monthNetProfit);
-  statProfitEl.className = monthNetProfit >= 0 ? 'calendar-stat-badge profit' : 'calendar-stat-badge profit negative';
-  
-  const statProfitParent = statProfitEl.closest('.calendar-stat-badge');
-  if (monthNetProfit >= 0) {
-    statProfitParent.style.background = 'var(--success-glow)';
-    statProfitParent.style.color = 'var(--success-text)';
-    statProfitParent.style.borderColor = 'rgba(5, 150, 105, 0.15)';
-  } else {
-    statProfitParent.style.background = 'var(--danger-glow)';
-    statProfitParent.style.color = 'var(--danger-text)';
-    statProfitParent.style.borderColor = 'rgba(225, 29, 72, 0.15)';
+  if (statProfitEl) {
+    statProfitEl.innerText = (monthNetProfit >= 0 ? '+' : '') + formatCurrency(monthNetProfit);
   }
   
-  document.getElementById('cal-stat-days').innerText = uniqueTradingDays.size;
+  const statProfitParent = document.getElementById('cal-stat-profit-container');
+  if (statProfitParent) {
+    if (monthNetProfit >= 0) {
+      statProfitParent.className = 'calendar-stat-badge profit-positive';
+    } else {
+      statProfitParent.className = 'calendar-stat-badge profit-negative';
+    }
+  }
+  
+  const statDaysEl = document.getElementById('cal-stat-days');
+  if (statDaysEl) {
+    statDaysEl.innerText = uniqueTradingDays.size;
+  }
 }
 
 function createDayCell(dayNum, dateStr, isOtherMonth, allTrades, isToday = false) {

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LC Dashboard - Lambda Capital</title>
+  <link rel="icon" type="image/jpeg" href="lc_logo.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -132,7 +133,8 @@
     <main class="main-content">
       <!-- Content Header -->
       <header class="content-header">
-        <div class="breadcrumbs">
+        <div class="breadcrumbs breadcrumb-container">
+          <img src="lc_logo.jpg" alt="LC" class="breadcrumb-logo" onerror="this.style.display='none'">
           <span class="breadcrumb-active" id="current-breadcrumb-path">Forex / Funded Accounts / FTMO / 10k</span>
         </div>
         <div class="header-actions">
@@ -150,7 +152,7 @@
           <div class="dashboard-row">
             <!-- Left Column: Capital Chart -->
             <section class="chart-panel chart-column">
-              <h2 class="panel-title">Capital Growth / Drawdown Chart</h2>
+              <h2 class="panel-title">Equity Curve</h2>
               <div class="chart-container" style="height: 380px;">
                 <canvas id="equityChart"></canvas>
               </div>
@@ -269,13 +271,13 @@
                 <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px;" onclick="goToToday()">Today</button>
               </div>
               <div class="calendar-stats">
-                <div class="calendar-stat-badge profit">
-                  <span>Monthly Stats:</span>
-                  <span id="cal-stat-profit" style="margin-left:4px;">$0.00</span>
+                <div class="calendar-stat-badge profit-positive" id="cal-stat-profit-container">
+                  <span class="stat-label">Monthly Stats:</span>
+                  <span id="cal-stat-profit" class="stat-value">$0.00</span>
                 </div>
-                <div class="calendar-stat-badge muted">
-                  <span>Trading Days:</span>
-                  <span id="cal-stat-days" style="margin-left:4px;">0</span>
+                <div class="calendar-stat-badge trading-days-badge" id="cal-stat-days-container">
+                  <span class="stat-label">Trading Days:</span>
+                  <span id="cal-stat-days" class="stat-value">0</span>
                 </div>
               </div>
             </div>

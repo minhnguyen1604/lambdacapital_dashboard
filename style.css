@@ -2,8 +2,8 @@
 
 :root {
   /* Light theme background */
-  --bg-dark: #f3f4f6;
-  --bg-gradient: radial-gradient(circle at top right, #f8fafc 0%, #e2e8f0 100%);
+  --bg-dark: #f4f4f6;
+  --bg-gradient: linear-gradient(135deg, #f4f4f6 0%, #eef0f3 100%);
   --panel-glass: rgba(255, 255, 255, 0.75);
   --panel-glass-hover: rgba(255, 255, 255, 0.9);
   --border-glass: rgba(0, 0, 0, 0.05);
@@ -254,6 +254,8 @@ body {
   border-left: 1px dashed rgba(0, 0, 0, 0.06);
   margin-left: 8px;
   margin-top: 2px;
+  overflow: hidden;
+  max-height: 0;
   transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -605,31 +607,71 @@ body {
 }
 
 .calendar-stat-badge {
-  padding: 8px 14px;
-  border-radius: var(--border-radius-sm);
-  font-size: 0.85rem;
-  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--border-glass);
+  background: var(--panel-glass);
+  box-shadow: var(--shadow-main);
+  transition: var(--transition-fast);
 }
 
-.calendar-stat-badge.profit {
-  background: var(--success-glow);
-  color: var(--success-text);
+.calendar-stat-badge .stat-label {
+  color: var(--text-secondary);
+}
+
+.calendar-stat-badge .stat-value {
+  padding: 4px 10px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: var(--transition-fast);
+}
+
+/* Success State for Profit */
+.calendar-stat-badge.profit-positive {
+  background: rgba(5, 150, 105, 0.04);
+  border-color: rgba(5, 150, 105, 0.15);
+}
+.calendar-stat-badge.profit-positive .stat-label {
+  color: #047857;
+}
+.calendar-stat-badge.profit-positive .stat-value {
+  background: rgba(5, 150, 105, 0.1);
+  color: #047857;
   border: 1px solid rgba(5, 150, 105, 0.15);
 }
 
-.calendar-stat-badge.profit.negative {
-  background: var(--danger-glow);
-  color: var(--danger-text);
+/* Danger State for Profit */
+.calendar-stat-badge.profit-negative {
+  background: rgba(225, 29, 72, 0.04);
+  border-color: rgba(225, 29, 72, 0.15);
+}
+.calendar-stat-badge.profit-negative .stat-label {
+  color: #be123c;
+}
+.calendar-stat-badge.profit-negative .stat-value {
+  background: rgba(225, 29, 72, 0.1);
+  color: #be123c;
   border: 1px solid rgba(225, 29, 72, 0.15);
 }
 
-.calendar-stat-badge.muted {
-  background: rgba(0, 0, 0, 0.03);
+/* Muted State for Trading Days */
+.calendar-stat-badge.trading-days-badge {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+.calendar-stat-badge.trading-days-badge .stat-label {
   color: var(--text-secondary);
-  border: 1px solid var(--border-glass);
+}
+.calendar-stat-badge.trading-days-badge .stat-value {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 /* Calendar Grid */
@@ -982,4 +1024,19 @@ th {
   .dashboard-row {
     flex-direction: column;
   }
+}
+
+/* Breadcrumb logo icon styling */
+.breadcrumb-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
