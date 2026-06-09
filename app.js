@@ -48,7 +48,7 @@ function toggleSidebar() {
   if (chartInstance) {
     setTimeout(() => {
       chartInstance.resize();
-    }, 310);
+    }, 510);
   }
 }
 
