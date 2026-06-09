@@ -7,7 +7,9 @@ const ACCOUNTS_CONFIG = {
   'ftmo-100k-2': { name: 'FTMO 100k #2', capital: 100000, type: 'FTMO' },
   'ftmo-100k-3': { name: 'FTMO 100k #3', capital: 100000, type: 'FTMO' },
   'ftmo-100k-4': { name: 'FTMO 100k #4', capital: 100000, type: 'FTMO' },
-  'the5ers-5k': { name: 'The5ers 5k', capital: 5000, type: 'The5ers' }
+  'the5ers-5k': { name: 'The5ers 5k', capital: 5000, type: 'The5ers' },
+  'personal-1': { name: 'Personal Acc #1', capital: 5000, type: 'Cá nhân' },
+  'personal-2': { name: 'Personal Acc #2', capital: 10000, type: 'Cá nhân' }
 };
 
 // System current date (hardcoded to June 9, 2026 to match the user's screenshot context)
@@ -34,6 +36,14 @@ const DEFAULT_TRADES = {
   'the5ers-5k': [
     { id: 't-5k-1', date: '2026-06-03', symbol: 'AUDUSD', direction: 'BUY', amount: 350.00, rr: 3.0 },
     { id: 't-5k-2', date: '2026-06-05', symbol: 'USDJPY', direction: 'SELL', amount: -100.00, rr: 1.0 }
+  ],
+  'personal-1': [
+    { id: 't-p1-1', date: '2026-06-02', symbol: 'EURUSD', direction: 'BUY', amount: 150.00, rr: 1.5 },
+    { id: 't-p1-2', date: '2026-06-04', symbol: 'XAUUSD', direction: 'SELL', amount: 80.00, rr: 2.0 }
+  ],
+  'personal-2': [
+    { id: 't-p2-1', date: '2026-06-03', symbol: 'GBPUSD', direction: 'SELL', amount: -200.00, rr: 1.0 },
+    { id: 't-p2-2', date: '2026-06-06', symbol: 'EURUSD', direction: 'BUY', amount: 450.00, rr: 2.2 }
   ]
 };
 
@@ -62,8 +72,9 @@ function clearAllTrades(accountId) {
 // --- App Initializer ---
 document.addEventListener('DOMContentLoaded', () => {
   // Setup default active states in sidebar
-  document.getElementById('forex-sub').style.maxHeight = '500px';
-  document.getElementById('tkq-nested').style.maxHeight = '500px';
+  document.getElementById('forex-sub').style.maxHeight = '600px';
+  document.getElementById('tkq-nested').style.maxHeight = '400px';
+  document.getElementById('tkcn-nested').style.maxHeight = '0px'; // Collapse personal list initially
   
   // Set default form date to today
   const dateInput = document.getElementById('trade-date');
@@ -84,7 +95,7 @@ function toggleNavGroup(id) {
     element.style.maxHeight = '0px';
     if (trigger) trigger.classList.add('collapsed');
   } else {
-    element.style.maxHeight = '500px';
+    element.style.maxHeight = '400px';
     if (trigger) trigger.classList.remove('collapsed');
   }
 }
@@ -316,10 +327,10 @@ function renderEquityChart(initialCapital, trades) {
     }
   }
   
-  // Premium Orange Gradient for LC brand
+  // Premium Light Orange Gradient for LC brand
   const chartGradient = ctx.createLinearGradient(0, 0, 0, 300);
-  chartGradient.addColorStop(0, 'rgba(255, 122, 0, 0.35)');
-  chartGradient.addColorStop(1, 'rgba(255, 122, 0, 0.00)');
+  chartGradient.addColorStop(0, 'rgba(255, 122, 0, 0.2)');
+  chartGradient.addColorStop(1, 'rgba(255, 122, 0, 0.0)');
   
   chartInstance = new Chart(ctx, {
     type: 'line',
@@ -334,12 +345,12 @@ function renderEquityChart(initialCapital, trades) {
         fill: true,
         tension: 0.35,
         pointBackgroundColor: '#ff9130',
-        pointBorderColor: 'rgba(255,255,255,0.1)',
-        pointBorderWidth: 1,
+        pointBorderColor: 'rgba(255,255,255,0.8)',
+        pointBorderWidth: 2,
         pointRadius: dailyBalances.length > 15 ? 2 : 4,
         pointHoverRadius: 6,
-        shadowColor: 'rgba(255, 122, 0, 0.5)',
-        shadowBlur: 10
+        shadowColor: 'rgba(255, 122, 0, 0.2)',
+        shadowBlur: 8
       }]
     },
     options: {
@@ -350,10 +361,10 @@ function renderEquityChart(initialCapital, trades) {
           display: false
         },
         tooltip: {
-          backgroundColor: 'rgba(20, 20, 25, 0.9)',
-          titleColor: '#ffffff',
-          bodyColor: '#f3f4f6',
-          borderColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          titleColor: '#111827',
+          bodyColor: '#4b5563',
+          borderColor: 'rgba(0, 0, 0, 0.08)',
           borderWidth: 1,
           padding: 12,
           displayColors: false,
@@ -367,11 +378,11 @@ function renderEquityChart(initialCapital, trades) {
       scales: {
         x: {
           grid: {
-            color: 'rgba(255, 255, 255, 0.03)',
-            borderColor: 'rgba(255, 255, 255, 0.05)'
+            color: 'rgba(0, 0, 0, 0.02)',
+            borderColor: 'rgba(0, 0, 0, 0.04)'
           },
           ticks: {
-            color: '#9ca3af',
+            color: '#6b7280',
             font: {
               family: 'Outfit'
             }
@@ -379,11 +390,11 @@ function renderEquityChart(initialCapital, trades) {
         },
         y: {
           grid: {
-            color: 'rgba(255, 255, 255, 0.03)',
-            borderColor: 'rgba(255, 255, 255, 0.05)'
+            color: 'rgba(0, 0, 0, 0.02)',
+            borderColor: 'rgba(0, 0, 0, 0.04)'
           },
           ticks: {
-            color: '#9ca3af',
+            color: '#6b7280',
             font: {
               family: 'Outfit'
             },
@@ -427,7 +438,6 @@ function renderCalendar(trades) {
   
   // Active calendar stat calculation (inside this month only)
   let monthNetProfit = 0;
-  let tradingDaysCount = 0;
   const uniqueTradingDays = new Set();
   
   // Generate days from previous month
@@ -471,16 +481,17 @@ function renderCalendar(trades) {
   const statProfitEl = document.getElementById('cal-stat-profit');
   statProfitEl.innerText = (monthNetProfit >= 0 ? '+' : '') + formatCurrency(monthNetProfit);
   statProfitEl.className = monthNetProfit >= 0 ? 'calendar-stat-badge profit' : 'calendar-stat-badge profit negative';
+  
   // Adjust parent background color if negative
   const statProfitParent = statProfitEl.closest('.calendar-stat-badge');
   if (monthNetProfit >= 0) {
     statProfitParent.style.background = 'var(--success-glow)';
     statProfitParent.style.color = 'var(--success-text)';
-    statProfitParent.style.borderColor = 'rgba(16, 185, 129, 0.15)';
+    statProfitParent.style.borderColor = 'rgba(5, 150, 105, 0.15)';
   } else {
     statProfitParent.style.background = 'var(--danger-glow)';
     statProfitParent.style.color = 'var(--danger-text)';
-    statProfitParent.style.borderColor = 'rgba(244, 63, 94, 0.15)';
+    statProfitParent.style.borderColor = 'rgba(225, 29, 72, 0.15)';
   }
   
   document.getElementById('cal-stat-days').innerText = uniqueTradingDays.size;
@@ -529,6 +540,7 @@ function adjustCalendarMonth(offset) {
   renderApp();
 }
 
+// Today navigation
 function goToToday() {
   activeCalendarDate = new Date(SYSTEM_DATE.getFullYear(), SYSTEM_DATE.getMonth(), 1);
   renderApp();
@@ -559,7 +571,7 @@ function renderSummaryView() {
     row.style.borderBottom = '1px solid var(--border-glass)';
     row.style.transition = 'var(--transition-fast)';
     row.addEventListener('mouseenter', () => {
-      row.style.background = 'rgba(255, 255, 255, 0.01)';
+      row.style.background = 'rgba(0, 0, 0, 0.01)';
     });
     row.addEventListener('mouseleave', () => {
       row.style.background = 'transparent';
@@ -569,10 +581,14 @@ function renderSummaryView() {
     const statusText = stats.totalTrades > 0 ? 'Hoạt động' : 'Chưa giao dịch';
     const statusStyle = stats.totalTrades > 0 
       ? 'color: var(--success-text); background: var(--success-glow); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:600;' 
-      : 'color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;';
+      : 'color: var(--text-muted); background: rgba(0,0,0,0.03); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;';
+      
+    // Determine dynamic breadcrumb path categories
+    const category = config.type === 'Cá nhân' ? 'Tài khoản cá nhân' : 'Tài khoản quỹ';
+    const breadcrumb = `Forex / ${category} / ${config.name}`;
       
     row.innerHTML = `
-      <td style="padding: 14px 20px; font-weight:600; color:#ffffff; cursor:pointer;" onclick="switchAccount('${accId}', 'Forex / Tài khoản quỹ / ${config.type} / ${config.name.replace(config.type + ' ', '')}')">
+      <td style="padding: 14px 20px; font-weight:600; color: var(--text-primary); cursor:pointer;" onclick="switchAccount('${accId}', '${breadcrumb}')">
         ${config.name}
         <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:normal;">Nhấp để xem chi tiết</span>
       </td>
@@ -603,6 +619,7 @@ function openAddTradeModal() {
   modal.classList.add('active');
 }
 
+// Close Modal
 function closeAddTradeModal() {
   const modal = document.getElementById('add-trade-modal');
   modal.classList.remove('active');

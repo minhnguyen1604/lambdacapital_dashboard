@@ -78,6 +78,21 @@
                 </div>
               </div>
             </div>
+            
+            <!-- Tài khoản cá nhân -->
+            <div class="nav-sub-item" id="nav-taikhoancanhan" onclick="toggleNavGroup('tkcn-nested')">
+              <span>Tài khoản cá nhân</span>
+              <span class="nav-item-chevron">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+            
+            <div class="nav-nested-list" id="tkcn-nested" style="max-height: 0px; overflow: hidden;">
+              <div class="nav-nested-item" id="acc-personal-1" onclick="switchAccount('personal-1', 'Forex / Tài khoản cá nhân / Personal Acc #1')">Personal Acc #1</div>
+              <div class="nav-nested-item" id="acc-personal-2" onclick="switchAccount('personal-2', 'Forex / Tài khoản cá nhân / Personal Acc #2')">Personal Acc #2</div>
+            </div>
           </div>
         </div>
         
