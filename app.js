@@ -377,9 +377,26 @@ function renderCapitalChart(trades) {
     }
     labels.push(dateStr);
   });
+
+  // Shadow glow plugin for the Equity Curve line
+  const shadowPlugin = {
+    id: 'shadowPlugin',
+    beforeDatasetDraw: (chart) => {
+      const { ctx } = chart;
+      ctx.save();
+      ctx.shadowColor = 'rgba(255, 122, 0, 0.22)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 6;
+    },
+    afterDatasetDraw: (chart) => {
+      const { ctx } = chart;
+      ctx.restore();
+    }
+  };
   
   chartInstance = new Chart(ctx, {
     type: 'line',
+    plugins: [shadowPlugin],
     data: {
       labels: labels,
       datasets: [{
@@ -461,8 +478,7 @@ function renderCapitalChart(trades) {
       scales: {
         x: {
           grid: {
-            color: 'rgba(0, 0, 0, 0.02)',
-            borderColor: 'rgba(0, 0, 0, 0.04)'
+            display: false
           },
           ticks: {
             color: '#6b7280',
@@ -597,10 +613,17 @@ function createDayCell(dayNum, dateStr, isOtherMonth, allTrades, isToday = false
   const dayTrades = allTrades.filter(t => t.date === dateStr);
   
   if (dayTrades.length > 0) {
+    const netProfit = dayTrades.reduce((sum, t) => sum + t.amount, 0);
+    
+    if (netProfit >= 0) {
+      cell.classList.add('has-profit');
+    } else {
+      cell.classList.add('has-loss');
+    }
+    
     const dayData = document.createElement('div');
     dayData.className = 'calendar-day-data';
     
-    const netProfit = dayTrades.reduce((sum, t) => sum + t.amount, 0);
     const profitSpan = document.createElement('span');
     profitSpan.className = 'calendar-day-profit ' + (netProfit >= 0 ? 'positive' : 'negative');
     profitSpan.innerText = (netProfit >= 0 ? '+' : '') + formatCurrency(netProfit);

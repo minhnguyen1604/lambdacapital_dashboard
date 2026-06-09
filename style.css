@@ -157,13 +157,13 @@ body {
 }
 
 .nav-section-title {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-secondary);
-  padding: 10px 12px 4px 12px;
-  font-weight: 600;
-  opacity: 0.8;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 12px 14px 6px 14px;
+  font-weight: 700;
+  opacity: 0.85;
 }
 
 .nav-item {
@@ -260,8 +260,9 @@ body {
 }
 
 .nav-nested-item {
-  padding: 8px 12px;
-  border-radius: var(--border-radius-sm);
+  padding: 6px 12px;
+  margin: 1px 0;
+  border-radius: 20px;
   color: var(--text-secondary);
   font-size: 0.82rem;
   cursor: pointer;
@@ -270,13 +271,14 @@ body {
 
 .nav-nested-item:hover {
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(0, 0, 0, 0.025);
 }
 
 .nav-nested-item.active {
   color: var(--accent-orange-text);
-  font-weight: 600;
-  background: rgba(255, 122, 0, 0.05);
+  font-weight: 700;
+  background: rgba(255, 122, 0, 0.08);
+  border: 1px solid rgba(255, 122, 0, 0.15);
 }
 
 /* Main Content Layout */
@@ -716,12 +718,31 @@ body {
   transition: var(--transition-fast);
   position: relative;
   min-height: 100px;
+  border-left: 3px solid transparent;
 }
 
 .calendar-day-cell:hover {
   background: #ffffff;
   border-color: rgba(0, 0, 0, 0.08);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+/* Heatmap win days styling */
+.calendar-day-cell.has-profit {
+  background: rgba(5, 150, 105, 0.035);
+  border-left-color: var(--success);
+}
+.calendar-day-cell.has-profit:hover {
+  background: rgba(5, 150, 105, 0.06);
+}
+
+/* Heatmap loss days styling */
+.calendar-day-cell.has-loss {
+  background: rgba(225, 29, 72, 0.035);
+  border-left-color: var(--danger);
+}
+.calendar-day-cell.has-loss:hover {
+  background: rgba(225, 29, 72, 0.06);
 }
 
 .calendar-day-cell.other-month {
@@ -993,7 +1014,7 @@ th {
 }
 
 .metrics-table tr {
-  border-bottom: 1px solid var(--border-glass);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.02);
   transition: var(--transition-fast);
 }
 
@@ -1002,21 +1023,21 @@ th {
 }
 
 .metrics-table tr:hover {
-  background: rgba(0, 0, 0, 0.01);
+  background: rgba(0, 0, 0, 0.015);
 }
 
 .metrics-table th {
-  padding: 8px 12px;
+  padding: 10px 14px;
   font-weight: 700;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
+  font-size: 0.8rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   border-bottom: 1px solid var(--border-glass-active);
 }
 
 .metrics-table td {
-  padding: 8px 12px;
+  padding: 9px 14px;
   font-size: 0.88rem;
   color: var(--text-primary);
 }
