@@ -27,9 +27,30 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tkq-nested').style.maxHeight = '400px';
   document.getElementById('tkcn-nested').style.maxHeight = '0px'; // Collapse personal list initially
   
+  // Restore sidebar state
+  const sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+  if (sidebarCollapsed) {
+    document.querySelector('.app-container').classList.add('sidebar-collapsed');
+  }
+  
   // Render dashboard
   renderApp();
 });
+
+// --- Toggle Sidebar ---
+function toggleSidebar() {
+  const appContainer = document.querySelector('.app-container');
+  appContainer.classList.toggle('sidebar-collapsed');
+  const isCollapsed = appContainer.classList.contains('sidebar-collapsed');
+  localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
+  
+  // Resize Chart.js to fit the expanded/contracted viewport width
+  if (chartInstance) {
+    setTimeout(() => {
+      chartInstance.resize();
+    }, 310);
+  }
+}
 
 // --- Toggle Sidebar Accordion ---
 function toggleNavGroup(id) {
@@ -384,7 +405,7 @@ function renderCapitalChart(trades) {
     beforeDatasetDraw: (chart) => {
       const { ctx } = chart;
       ctx.save();
-      ctx.shadowColor = 'rgba(255, 122, 0, 0.22)';
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.08)';
       ctx.shadowBlur = 10;
       ctx.shadowOffsetY = 6;
     },
@@ -402,13 +423,38 @@ function renderCapitalChart(trades) {
       datasets: [{
         label: 'Equity ($)',
         data: equityData,
-        borderColor: '#ff7a00',
+        borderColor: function(context) {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          if (!chartArea) return '#059669';
+          
+          const zeroPixel = chart.scales.y.getPixelForValue(initialCapital);
+          const height = chartArea.bottom - chartArea.top;
+          const zeroPos = (zeroPixel - chartArea.top) / height;
+          
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          
+          if (zeroPos > 0 && zeroPos < 1) {
+            gradient.addColorStop(0, '#059669'); // Green above initialCapital
+            gradient.addColorStop(zeroPos, '#059669');
+            gradient.addColorStop(zeroPos, '#e11d48');
+            gradient.addColorStop(1, '#e11d48'); // Red below initialCapital
+          } else if (zeroPos <= 0) {
+            return '#e11d48';
+          } else {
+            return '#059669';
+          }
+          return gradient;
+        },
         borderWidth: 3,
         fill: true,
         tension: 0.35,
-        pointBackgroundColor: '#ff9130',
-        pointBorderColor: 'rgba(255,255,255,0.8)',
-        pointBorderWidth: 2,
+        pointBackgroundColor: function(context) {
+          const val = context.raw;
+          return val >= initialCapital ? '#059669' : '#e11d48';
+        },
+        pointBorderColor: 'rgba(255,255,255,0.9)',
+        pointBorderWidth: 1.5,
         pointRadius: equityData.length > 25 ? 1 : 3,
         pointHoverRadius: 6,
         // Dynamic green above initial capital and red below initial capital
@@ -494,13 +540,13 @@ function renderCapitalChart(trades) {
           grid: {
             // Draw a faint gray dashed threshold line to clearly demarcate the initial capital
             color: function(context) {
-              return context.tick.value === initialCapital ? 'rgba(0, 0, 0, 0.15)' : 'rgba(0, 0, 0, 0.02)';
+              return Math.abs(context.tick.value - initialCapital) < 0.1 ? 'rgba(15, 23, 42, 0.12)' : 'rgba(0, 0, 0, 0.02)';
             },
             lineWidth: function(context) {
-              return context.tick.value === initialCapital ? 2 : 1;
+              return Math.abs(context.tick.value - initialCapital) < 0.1 ? 1.5 : 1;
             },
             borderDash: function(context) {
-              return context.tick.value === initialCapital ? [5, 5] : [];
+              return Math.abs(context.tick.value - initialCapital) < 0.1 ? [5, 5] : [];
             },
             borderColor: 'rgba(0, 0, 0, 0.04)'
           },

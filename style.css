@@ -290,6 +290,43 @@ body {
   flex-direction: column;
   padding: 24px;
   gap: 24px;
+  transition: var(--transition-normal);
+}
+
+/* Sidebar Collapsible Layout */
+.sidebar-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-fast);
+}
+
+.sidebar-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+}
+
+.sidebar-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.sidebar-toggle-btn svg {
+  transition: var(--transition-fast);
+}
+
+.sidebar-collapsed .sidebar {
+  transform: translateX(-100%);
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: 0;
 }
 
 /* Header Styles */
