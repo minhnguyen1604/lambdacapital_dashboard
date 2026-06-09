@@ -165,7 +165,7 @@ function calculateKPIs(initialCapital, trades) {
   const avgLoss = losses > 0 ? totalLossAmount / losses : 0;
   const expectancy = totalTrades > 0 ? profit / totalTrades : 0;
   const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : (totalWinAmount > 0 ? Infinity : 0);
-  const avgRR = totalTrades > 0 ? sumRR / totalTrades : 0;
+  const avgRR = avgLoss > 0 ? avgWin / avgLoss : 0;
   const avgDuration = totalTrades > 0 ? sumDuration / totalTrades : 0;
   
   // Calculate Peak-to-Trough Max Drawdown and Consecutive Streaks
