@@ -11,7 +11,8 @@ const ACCOUNTS_CONFIG = {
   'ftmo-100k-3': { name: 'FTMO 100k #3', capital: 100000, type: 'FTMO' },
   'ftmo-100k-4': { name: 'FTMO 100k #4', capital: 100000, type: 'FTMO' },
   'the5ers-5k': { name: 'The5ers 5k', capital: 5000, type: 'The5ers' },
-  'personal-1': { name: 'Lambda Capital', capital: 10000, type: 'Personal' }
+  'personal-1': { name: 'Personal Acc #1', capital: 5000, type: 'Personal' },
+  'personal-2': { name: 'Personal Acc #2', capital: 10000, type: 'Personal' }
 };
 
 // System current date (hardcoded to June 9, 2026 to match the user's screenshot context)
