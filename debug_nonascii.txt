@@ -1,0 +1,17 @@
+﻿python : Traceback (most recent call last):
+At line:1 char:1
++ python -c "content = open('app.js', encoding='utf-8').read(); bads =  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<string>", line 1, in <module>
+    content = open('app.js', encoding='utf-8').read(); bads = [(i, repr(content[i]), repr(content[max(0,i-40):i+40])) 
+for i in range(len(content)) if ord(content[i]) > 127]; [print(x) for x in bads]
+                                                                                                                       
+                                                        ~~~~~^^^
+  File "C:\Users\nguyen.tuan.minh\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u221e' in position 10: character maps to <undefined>
+

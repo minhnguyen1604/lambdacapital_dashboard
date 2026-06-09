@@ -276,7 +276,7 @@ function updateDateRangeDisplay() {
   } else if (!dateRangeEnd) {
     label.textContent = `From ${fmt(dateRangeStart)}`;
   } else {
-    label.textContent = `${fmt(dateRangeStart)} – ${fmt(dateRangeEnd)}`;
+    label.textContent = `${fmt(dateRangeStart)} - ${fmt(dateRangeEnd)}`;
   }
 }
 
