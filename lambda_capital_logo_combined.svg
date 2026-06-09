@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="100%" height="100%" style="background: #0f172a; border-radius: 8px; font-family: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', sans-serif;">
+  <!-- Gradients for premium orange glow effect -->
+  <defs>
+    <linearGradient id="lambdaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff9d42" />
+      <stop offset="100%" stop-color="#ff7a00" />
+    </linearGradient>
+  </defs>
+
+  <!-- Geometric Lambda Icon (Λ) -->
+  <g transform="translate(40, 20)">
+    <!-- Shadow/Glow -->
+    <path d="M 60,135 L 90,35 L 115,35 L 85,135 Z" fill="#ff7a00" opacity="0.15" filter="blur(4px)" />
+    <path d="M 96,55 L 108,35 L 150,135 L 125,135 Z" fill="#ff7a00" opacity="0.15" filter="blur(4px)" />
+    
+    <!-- Left Leg -->
+    <path d="M 60,135 L 90,35 L 115,35 L 85,135 Z" fill="url(#lambdaGrad)" />
+    
+    <!-- Right Leg (Intersects at the top) -->
+    <path d="M 96,55 L 108,35 L 150,135 L 125,135 Z" fill="url(#lambdaGrad)" />
+    
+    <!-- Accent Point -->
+    <circle cx="120" cy="30" r="4" fill="#ffffff" opacity="0.4" />
+  </g>
+
+  <!-- Typography -->
+  <!-- "LAMBDA" (White, Bold) -->
+  <text x="220" y="105" fill="#ffffff" font-size="52" font-weight="800" letter-spacing="0.04em">LAMBDA</text>
+  
+  <!-- "CAPITAL" (Accent Orange, Semibold) -->
+  <text x="465" y="105" fill="#ff7a00" font-size="52" font-weight="700" letter-spacing="0.04em">CAPITAL</text>
+  
+  <!-- Subtitle Tagline (Muted Slate) -->
+  <text x="222" y="150" fill="#94a3b8" font-size="16" font-weight="600" letter-spacing="0.18em">QUANTITATIVE TRADING &amp; ASSET MANAGEMENT</text>
+</svg>

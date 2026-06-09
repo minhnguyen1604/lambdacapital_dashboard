@@ -19,13 +19,14 @@ let currentAccountId = 'ftmo-10k';
 let activeView = 'forex-account'; // 'forex-account', 'stock', 'summary'
 let activeCalendarDate = new Date('2026-06-01'); // Year/Month view state
 let chartInstance = null;
+let currentAccountTrades = [];
+let activeHeaderTimeFilter = 'all';
 
 // --- App Initializer ---
 document.addEventListener('DOMContentLoaded', () => {
   // Setup default active states in sidebar
   document.getElementById('forex-sub').style.maxHeight = '600px';
   document.getElementById('tkq-nested').style.maxHeight = '400px';
-  document.getElementById('tkcn-nested').style.maxHeight = '0px'; // Collapse personal list initially
   
   // Restore sidebar state
   const sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
@@ -67,6 +68,7 @@ function toggleNavGroup(id) {
 }
 
 // --- Navigation actions ---
+// --- Navigation actions ---
 function switchAccount(accountId, breadcrumbText) {
   currentAccountId = accountId;
   activeView = 'forex-account';
@@ -85,17 +87,36 @@ function switchAccount(accountId, breadcrumbText) {
     activeSubItem.classList.add('active');
   }
   
-  // Update panels visibility
-  document.getElementById('view-forex-account').style.display = 'flex';
-  document.getElementById('view-stock').style.display = 'none';
-  document.getElementById('view-summary').style.display = 'none';
-  
   // Update breadcrumb
   document.getElementById('current-breadcrumb-path').innerHTML = breadcrumbText;
   
-  // Re-render
-  renderApp();
-  showToast(`Switched to account ${ACCOUNTS_CONFIG[accountId].name}`, 'info');
+  // Update panels visibility
+  if (accountId === 'ftmo-10k') {
+    document.getElementById('view-forex-account').style.display = 'flex';
+    document.getElementById('view-stock').style.display = 'none';
+    document.getElementById('view-summary').style.display = 'none';
+    document.getElementById('view-coming-soon').style.display = 'none';
+    
+    // Show top header on workspace view
+    document.querySelector('.content-header').style.display = 'flex';
+    
+    // Re-render
+    renderApp();
+    showToast(`Switched to account ${ACCOUNTS_CONFIG[accountId].name}`, 'info');
+  } else {
+    document.getElementById('view-forex-account').style.display = 'none';
+    document.getElementById('view-stock').style.display = 'none';
+    document.getElementById('view-summary').style.display = 'none';
+    document.getElementById('view-coming-soon').style.display = 'flex';
+    
+    // Hide top header on Coming Soon view
+    document.querySelector('.content-header').style.display = 'none';
+    
+    // Restart letter animation
+    restartComingSoonAnimation();
+    
+    showToast(`Account ${ACCOUNTS_CONFIG[accountId].name} is coming soon`, 'info');
+  }
 }
 
 // Switch main section
@@ -110,26 +131,38 @@ function switchMainView(viewType, viewName) {
     item.classList.remove('active');
   });
   
+  document.getElementById('view-forex-account').style.display = 'none';
+  document.getElementById('view-stock').style.display = 'none';
+  document.getElementById('view-summary').style.display = 'none';
+  document.getElementById('view-coming-soon').style.display = 'flex';
+  
+  // Hide top header on Coming Soon view
+  document.querySelector('.content-header').style.display = 'none';
+  
+  // Restart letter animation
+  restartComingSoonAnimation();
+  
   if (viewType === 'stock') {
     document.getElementById('nav-stock').classList.add('active');
-    document.getElementById('view-forex-account').style.display = 'none';
-    document.getElementById('view-stock').style.display = 'block';
-    document.getElementById('view-summary').style.display = 'none';
   } else if (viewType === 'summary') {
     document.getElementById('nav-summary').classList.add('active');
-    document.getElementById('view-forex-account').style.display = 'none';
-    document.getElementById('view-stock').style.display = 'none';
-    document.getElementById('view-summary').style.display = 'block';
-    
-    renderSummaryView();
   }
   
   document.getElementById('current-breadcrumb-path').innerText = viewName;
 }
 
+// --- Restart Coming Soon Animation ---
+function restartComingSoonAnimation() {
+  const content = document.querySelector('.luxury-coming-soon-content');
+  if (!content) return;
+  // Clone and replace to restart all CSS animations reliably
+  const clone = content.cloneNode(true);
+  content.parentNode.replaceChild(clone, content);
+}
+
 // --- Data Render Functions ---
 async function renderApp() {
-  if (activeView !== 'forex-account') return;
+  if (activeView !== 'forex-account' || currentAccountId !== 'ftmo-10k') return;
   
   const config = ACCOUNTS_CONFIG[currentAccountId];
   
@@ -139,23 +172,136 @@ async function renderApp() {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const trades = await response.json();
+    currentAccountTrades = await response.json();
     
-    // Calculate KPIs
-    const stats = calculateKPIs(config.capital, trades);
+    // Populate header time filter options dynamically
+    populateHeaderTimeFilterOptions();
     
-    // Render KPI values
-    updateKPIDom(stats);
-    
-    // Render Capital Growth / Drawdown Chart
-    renderCapitalChart(trades);
-    
-    // Render Calendar
-    renderCalendar(trades);
+    // Render the filtered state
+    renderAppFiltered();
   } catch (err) {
     console.error("Error loading account data from SQLite:", err);
     showToast("Could not connect to SQLite database!", "error");
   }
+}
+
+function populateHeaderTimeFilterOptions() {
+  const menu = document.getElementById('filter-dropdown-menu');
+  if (!menu) return;
+  
+  menu.innerHTML = '';
+  
+  // Add "All Time" Option
+  const allOpt = document.createElement('div');
+  allOpt.className = 'dropdown-item' + (activeHeaderTimeFilter === 'all' ? ' active' : '');
+  allOpt.innerText = 'All Time';
+  allOpt.onclick = (e) => {
+    e.stopPropagation();
+    selectHeaderTimeFilter('all');
+  };
+  menu.appendChild(allOpt);
+  
+  // Find the oldest trade date
+  let oldestDate = new Date(SYSTEM_DATE);
+  currentAccountTrades.forEach(t => {
+    if (t.date) {
+      const d = new Date(t.date);
+      if (!isNaN(d.getTime()) && d < oldestDate) {
+        oldestDate = d;
+      }
+    }
+  });
+  
+  const startYear = oldestDate.getFullYear();
+  const startMonth = oldestDate.getMonth();
+  
+  const endYear = SYSTEM_DATE.getFullYear();
+  const endMonth = SYSTEM_DATE.getMonth();
+  
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  
+  let y = endYear;
+  let m = endMonth;
+  
+  while (y > startYear || (y === startYear && m >= startMonth)) {
+    const monthStr = String(m + 1).padStart(2, '0');
+    const value = `${y}-${monthStr}`;
+    const label = `${monthNames[m]} ${y}`;
+    
+    const opt = document.createElement('div');
+    opt.className = 'dropdown-item' + (activeHeaderTimeFilter === value ? ' active' : '');
+    opt.innerText = label;
+    const currentVal = value;
+    opt.onclick = (e) => {
+      e.stopPropagation();
+      selectHeaderTimeFilter(currentVal);
+    };
+    menu.appendChild(opt);
+    
+    m--;
+    if (m < 0) {
+      m = 11;
+      y--;
+    }
+  }
+}
+
+function toggleFilterDropdown(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('filter-dropdown-menu');
+  if (menu) {
+    menu.classList.toggle('show');
+  }
+}
+
+function selectHeaderTimeFilter(value) {
+  activeHeaderTimeFilter = value;
+  
+  // Collapse dropdown
+  const menu = document.getElementById('filter-dropdown-menu');
+  if (menu) {
+    menu.classList.remove('show');
+  }
+  
+  // Update dropdown highlighted items
+  populateHeaderTimeFilterOptions();
+  
+  // Render stats
+  renderAppFiltered();
+}
+
+// Global click event to close custom dropdown menu on outside clicks
+document.addEventListener('click', () => {
+  const menu = document.getElementById('filter-dropdown-menu');
+  if (menu) {
+    menu.classList.remove('show');
+  }
+});
+
+function renderAppFiltered() {
+  if (activeView !== 'forex-account') return;
+  const config = ACCOUNTS_CONFIG[currentAccountId];
+  
+  // Filter trades based on selection
+  let filteredTrades = currentAccountTrades;
+  if (activeHeaderTimeFilter !== 'all') {
+    filteredTrades = currentAccountTrades.filter(t => {
+      if (!t.date) return false;
+      return t.date.startsWith(activeHeaderTimeFilter);
+    });
+  }
+  
+  // Calculate KPIs for filtered trades
+  const stats = calculateKPIs(config.capital, filteredTrades);
+  
+  // Render KPI values (updates risk card and performance metrics table)
+  updateKPIDom(stats);
+  
+  // Render Capital Growth / Drawdown Chart for filtered trades
+  renderCapitalChart(filteredTrades);
+  
+  // Render Calendar (remains separate, showing all trades for the active calendar month)
+  renderCalendar(currentAccountTrades);
 }
 
 function calculateKPIs(initialCapital, trades) {
@@ -234,6 +380,102 @@ function calculateKPIs(initialCapital, trades) {
     }
   });
   
+  // 1. Recovery Factor
+  const recoveryFactor = maxDDAmount > 0 ? profit / maxDDAmount : 0;
+
+  // 2. Kelly Criterion (%)
+  const winRateDec = winrate / 100;
+  const winLossRatio = avgLoss > 0 ? avgWin / avgLoss : 0;
+  let kelly = 0;
+  if (winLossRatio > 0) {
+    kelly = winRateDec - (1 - winRateDec) / winLossRatio;
+  }
+  const kellyPercent = kelly * 100;
+
+  // 3. Sharpe Ratio (Trade-based)
+  const avgTradeProfit = expectancy;
+  let varianceSum = 0;
+  trades.forEach(t => {
+    varianceSum += Math.pow(t.amount - avgTradeProfit, 2);
+  });
+  const variance = totalTrades > 1 ? varianceSum / (totalTrades - 1) : 0;
+  const stdDev = Math.sqrt(variance);
+  const sharpeRatio = stdDev > 0 ? avgTradeProfit / stdDev : 0;
+
+  // 4. Long / Short Win Rate
+  let longTradesCount = 0;
+  let longWins = 0;
+  let shortTradesCount = 0;
+  let shortWins = 0;
+  trades.forEach(t => {
+    const isLong = (t.direction.toUpperCase() === 'BUY');
+    if (isLong) {
+      longTradesCount++;
+      if (t.amount > 0) longWins++;
+    } else {
+      shortTradesCount++;
+      if (t.amount > 0) shortWins++;
+    }
+  });
+  const longWinRate = longTradesCount > 0 ? (longWins / longTradesCount) * 100 : 0;
+  const shortWinRate = shortTradesCount > 0 ? (shortWins / shortTradesCount) * 100 : 0;
+  const longPercent = totalTrades > 0 ? (longTradesCount / totalTrades) * 100 : 0;
+  const shortPercent = totalTrades > 0 ? (shortTradesCount / totalTrades) * 100 : 0;
+
+  // 5. Win / Loss Hold Ratio
+  let winDurationSum = 0;
+  let winDurationCount = 0;
+  let lossDurationSum = 0;
+  let lossDurationCount = 0;
+  trades.forEach(t => {
+    if (t.amount > 0) {
+      winDurationSum += t.duration || 0;
+      winDurationCount++;
+    } else if (t.amount < 0) {
+      lossDurationSum += t.duration || 0;
+      lossDurationCount++;
+    }
+  });
+  const avgWinDuration = winDurationCount > 0 ? winDurationSum / winDurationCount : 0;
+  const avgLossDuration = lossDurationCount > 0 ? lossDurationSum / lossDurationCount : 0;
+  const holdRatio = avgLossDuration > 0 ? avgWinDuration / avgLossDuration : 0;
+
+  // 6. Profit Concentration Ratio
+  let maxWin = 0;
+  trades.forEach(t => {
+    if (t.amount > maxWin) {
+      maxWin = t.amount;
+    }
+  });
+  const concentration = profit > 0 ? (maxWin / profit) * 100 : 0;
+
+  // Group trades by date for daily profit/loss calculation (Max Daily Loss)
+  const dailyProfits = {};
+  trades.forEach(t => {
+    if (t.date) {
+      dailyProfits[t.date] = (dailyProfits[t.date] || 0) + t.amount;
+    }
+  });
+  
+  let maxDailyLoss = 0; // Worst negative daily net profit
+  Object.values(dailyProfits).forEach(val => {
+    if (val < maxDailyLoss) {
+      maxDailyLoss = val;
+    }
+  });
+
+  // Max Loss compared to Initial Capital
+  let lowestEquity = initialCapital;
+  let currentEquity = initialCapital;
+  sortedTrades.forEach(t => {
+    currentEquity += t.amount;
+    if (currentEquity < lowestEquity) {
+      lowestEquity = currentEquity;
+    }
+  });
+  const maxLossFromInitial = initialCapital - lowestEquity; // positive drop below initialCapital
+  const maxLossFromInitialPct = (maxLossFromInitial / initialCapital) * 100;
+
   // Calculate Max Drawdown Duration (Time Balance stays below Initial Capital)
   const maxDDurationText = calculateMaxDrawdownDuration(initialCapital, trades);
   
@@ -255,7 +497,21 @@ function calculateKPIs(initialCapital, trades) {
     maxDDAmount,
     maxDDPercent,
     maxWinsStreak,
-    maxLossesStreak
+    maxLossesStreak,
+    recoveryFactor,
+    kellyPercent,
+    sharpeRatio,
+    longWinRate,
+    shortWinRate,
+    holdRatio,
+    concentration,
+    longTradesCount,
+    shortTradesCount,
+    longPercent,
+    shortPercent,
+    maxDailyLoss,
+    maxLossFromInitial,
+    maxLossFromInitialPct
   };
 }
 
@@ -364,6 +620,151 @@ function updateKPIDom(stats) {
 
   // 17. Max Consecutive Losses
   document.getElementById('kpi-max-consec-losses').innerText = stats.maxLossesStreak;
+
+  // 18. Recovery Factor
+  document.getElementById('kpi-recovery-factor').innerText = stats.totalTrades > 0 && stats.maxDDAmount > 0 
+    ? stats.recoveryFactor.toFixed(2) 
+    : 'N/A';
+
+  // 19. Kelly Criterion
+  document.getElementById('kpi-kelly').innerText = stats.totalTrades > 0 
+    ? (stats.kellyPercent >= 0 ? '+' : '') + stats.kellyPercent.toFixed(1) + '%' 
+    : 'N/A';
+
+  // 20. Sharpe Ratio
+  document.getElementById('kpi-sharpe').innerText = stats.totalTrades > 1 && stats.sharpeRatio > 0 
+    ? stats.sharpeRatio.toFixed(2) 
+    : 'N/A';
+
+  // 21. Long / Short Win Rate
+  document.getElementById('kpi-long-short-wr').innerText = `${stats.longWinRate.toFixed(0)}% / ${stats.shortWinRate.toFixed(0)}%`;
+
+  // 22. Win / Loss Hold Ratio
+  document.getElementById('kpi-hold-ratio').innerText = stats.holdRatio > 0 
+    ? stats.holdRatio.toFixed(2) + 'x' 
+    : 'N/A';
+
+  // 23. Profit Concentration
+  document.getElementById('kpi-concentration').innerText = stats.profit > 0 
+    ? stats.concentration.toFixed(1) + '%' 
+    : '0.0%';
+
+  // Update Risk KPIs
+  const initialCapital = stats.initialCapital || 10000;
+  
+  // Update Return Card (KPI 1)
+  const profitVal = stats.profit || 0;
+  const returnPct = initialCapital > 0 ? (profitVal / initialCapital) * 100 : 0;
+  
+  const returnProfitEl = document.getElementById('risk-monthly-profit');
+  if (returnProfitEl) {
+    returnProfitEl.innerText = (profitVal >= 0 ? '+' : '') + formatCurrency(profitVal);
+    returnProfitEl.className = 'kpi-value ' + (profitVal >= 0 ? 'positive' : 'negative');
+  }
+  
+  const returnPercentEl = document.getElementById('risk-monthly-percent');
+  if (returnPercentEl) {
+    let labelSuffix = ' MoM';
+    if (activeHeaderTimeFilter === 'all') {
+      labelSuffix = ' Initial';
+    }
+    returnPercentEl.innerText = (profitVal >= 0 ? '+' : '') + returnPct.toFixed(1) + '%' + labelSuffix;
+    returnPercentEl.className = 'kpi-badge ' + (profitVal >= 0 ? 'positive' : 'negative');
+  }
+  
+  // 5% target is represented in the middle (50% width), meaning 10% profit fills the bar (100% width)
+  const scaleMax = initialCapital * 0.10; 
+  const targetRatio = scaleMax > 0 ? (Math.max(0, profitVal) / scaleMax) * 100 : 0;
+  const targetWidth = Math.min(targetRatio, 100);
+  
+  const returnBarEl = document.getElementById('risk-monthly-bar');
+  if (returnBarEl) {
+    returnBarEl.style.width = targetWidth + '%';
+    returnBarEl.style.backgroundColor = '#059669'; // Green for profit progress
+  }
+  
+  const returnRangeLabelEl = document.getElementById('risk-monthly-range-label');
+  if (returnRangeLabelEl) {
+    if (activeHeaderTimeFilter === 'all') {
+      returnRangeLabelEl.innerText = 'All Time';
+    } else {
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const [year, monthStr] = activeHeaderTimeFilter.split('-');
+      const mIdx = parseInt(monthStr, 10) - 1;
+      returnRangeLabelEl.innerText = `${monthNames[mIdx]} ${year}`;
+    }
+  }
+  
+  // 1. Max Daily Loss (3% limit)
+  const displayDailyLoss = Math.abs(stats.maxDailyLoss || 0);
+  const dailyLossPct = initialCapital > 0 ? (displayDailyLoss / initialCapital) * 100 : 0;
+  const dailyLossLimit = initialCapital * 0.03;
+  const dailyLossLimitPct = dailyLossLimit > 0 ? (displayDailyLoss / dailyLossLimit) * 100 : 0;
+  const dailyLossWidth = Math.min(dailyLossLimitPct, 100);
+  
+  let dailyLossColor = '#059669'; // Green
+  if (dailyLossLimitPct >= 80) {
+    dailyLossColor = '#f87171'; // Red
+  } else if (dailyLossLimitPct >= 50) {
+    dailyLossColor = '#ff7a00'; // Orange
+  }
+  
+  const dailyLossValEl = document.getElementById('risk-daily-loss');
+  if (dailyLossValEl) dailyLossValEl.innerText = formatCurrency(displayDailyLoss);
+  const dailyLossPctEl = document.getElementById('risk-daily-loss-pct');
+  if (dailyLossPctEl) dailyLossPctEl.innerText = dailyLossPct.toFixed(1) + '%';
+  const dailyLossBarEl = document.getElementById('risk-daily-loss-bar');
+  if (dailyLossBarEl) {
+    dailyLossBarEl.style.width = dailyLossWidth + '%';
+    dailyLossBarEl.style.backgroundColor = dailyLossColor;
+  }
+  
+  // 2. Max Loss vs Initial (10% limit)
+  const maxLossFromInitial = stats.maxLossFromInitial || 0;
+  const maxLossFromInitialPct = stats.maxLossFromInitialPct || 0;
+  const initialDrawdownLimit = initialCapital * 0.10;
+  const initialDrawdownLimitPct = initialDrawdownLimit > 0 ? (maxLossFromInitial / initialDrawdownLimit) * 100 : 0;
+  const initialDrawdownWidth = Math.min(initialDrawdownLimitPct, 100);
+  
+  let initialDrawdownColor = '#059669'; // Green
+  if (initialDrawdownLimitPct >= 80) {
+    initialDrawdownColor = '#f87171'; // Red
+  } else if (initialDrawdownLimitPct >= 50) {
+    initialDrawdownColor = '#ff7a00'; // Orange
+  }
+  
+  const initDDValEl = document.getElementById('risk-initial-drawdown');
+  if (initDDValEl) initDDValEl.innerText = formatCurrency(maxLossFromInitial);
+  const initDDPctEl = document.getElementById('risk-initial-drawdown-pct');
+  if (initDDPctEl) initDDPctEl.innerText = maxLossFromInitialPct.toFixed(1) + '%';
+  const initDDBarEl = document.getElementById('risk-initial-drawdown-bar');
+  if (initDDBarEl) {
+    initDDBarEl.style.width = initialDrawdownWidth + '%';
+    initDDBarEl.style.backgroundColor = initialDrawdownColor;
+  }
+  
+  // 3. Max Drawdown Peak (10% limit)
+  const maxDDAmount = stats.maxDDAmount || 0;
+  const maxDDPercent = stats.maxDDPercent || 0;
+  const peakDrawdownLimitPct = (maxDDPercent / 10.0) * 100;
+  const peakDrawdownWidth = Math.min(peakDrawdownLimitPct, 100);
+  
+  let peakDrawdownColor = '#059669'; // Green
+  if (peakDrawdownLimitPct >= 80) {
+    peakDrawdownColor = '#f87171'; // Red
+  } else if (peakDrawdownLimitPct >= 50) {
+    peakDrawdownColor = '#ff7a00'; // Orange
+  }
+  
+  const peakDDValEl = document.getElementById('risk-peak-drawdown');
+  if (peakDDValEl) peakDDValEl.innerText = formatCurrency(maxDDAmount);
+  const peakDDPctEl = document.getElementById('risk-peak-drawdown-pct');
+  if (peakDDPctEl) peakDDPctEl.innerText = maxDDPercent.toFixed(1) + '%';
+  const peakDDBarEl = document.getElementById('risk-peak-drawdown-bar');
+  if (peakDDBarEl) {
+    peakDDBarEl.style.width = peakDrawdownWidth + '%';
+    peakDDBarEl.style.backgroundColor = peakDrawdownColor;
+  }
 }
 
 // --- Capital Growth / Drawdown Chart (Chart.js) ---
@@ -437,10 +838,10 @@ function renderCapitalChart(trades) {
           if (zeroPos > 0 && zeroPos < 1) {
             gradient.addColorStop(0, '#059669'); // Green above initialCapital
             gradient.addColorStop(zeroPos, '#059669');
-            gradient.addColorStop(zeroPos, '#e11d48');
-            gradient.addColorStop(1, '#e11d48'); // Red below initialCapital
+            gradient.addColorStop(zeroPos, '#f87171');
+            gradient.addColorStop(1, '#f87171'); // Soft red below initialCapital
           } else if (zeroPos <= 0) {
-            return '#e11d48';
+            return '#f87171';
           } else {
             return '#059669';
           }
@@ -451,7 +852,7 @@ function renderCapitalChart(trades) {
         tension: 0.35,
         pointBackgroundColor: function(context) {
           const val = context.raw;
-          return val >= initialCapital ? '#059669' : '#e11d48';
+          return val >= initialCapital ? '#059669' : '#f87171';
         },
         pointBorderColor: 'rgba(255,255,255,0.9)',
         pointBorderWidth: 1.5,
@@ -472,10 +873,10 @@ function renderCapitalChart(trades) {
           if (zeroPos > 0 && zeroPos < 1) {
             gradient.addColorStop(0, 'rgba(5, 150, 105, 0.18)'); // Green above initialCapital
             gradient.addColorStop(zeroPos - 0.01, 'rgba(5, 150, 105, 0.01)');
-            gradient.addColorStop(zeroPos + 0.01, 'rgba(225, 29, 72, 0.01)');
-            gradient.addColorStop(1, 'rgba(225, 29, 72, 0.18)'); // Red below initialCapital
+            gradient.addColorStop(zeroPos + 0.01, 'rgba(248, 113, 113, 0.01)');
+            gradient.addColorStop(1, 'rgba(248, 113, 113, 0.15)'); // Soft red below initialCapital
           } else if (zeroPos <= 0) {
-            return 'rgba(225, 29, 72, 0.15)'; // Entirely below initialCapital
+            return 'rgba(248, 113, 113, 0.12)'; // Entirely below initialCapital
           } else {
             return 'rgba(5, 150, 105, 0.15)'; // Entirely above initialCapital
           }

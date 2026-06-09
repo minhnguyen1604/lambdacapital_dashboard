@@ -17,10 +17,14 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="brand-section">
+        <!-- Expanded state: combined luxury logo -->
+        <a href="#" class="brand-logo-combined-link">
+          <img src="lambda_capital_logo_combined_keyed_light.png" alt="Lambda Capital" class="brand-logo-combined">
+        </a>
+        <!-- Collapsed state: original square logo -->
         <div class="brand-logo-container">
           <img src="lc_logo.jpg" alt="Lambda Capital Logo" class="brand-logo" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=&quot;color:#ff7a00;font-weight:bold;font-size:1.2rem;&quot;>Λ</span>'">
         </div>
-        <div class="brand-name">Lambda Capital</div>
       </div>
       
       <nav class="nav-menu">
@@ -87,19 +91,10 @@
             </div>
             
             <!-- Personal Accounts -->
-            <div class="nav-sub-item" id="nav-taikhoancanhan" onclick="toggleNavGroup('tkcn-nested')">
+            <div class="nav-sub-item" id="nav-taikhoancanhan">
               <span>Personal Accounts</span>
-              <span class="nav-item-chevron">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </span>
             </div>
-            
-            <div class="nav-nested-list" id="tkcn-nested" style="max-height: 0px; overflow: hidden;">
-              <div class="nav-nested-item" id="acc-personal-1" onclick="switchAccount('personal-1', 'Forex / Personal Accounts / Personal Acc #1')">Personal Acc #1</div>
-              <div class="nav-nested-item" id="acc-personal-2" onclick="switchAccount('personal-2', 'Forex / Personal Accounts / Personal Acc #2')">Personal Acc #2</div>
-            </div>
+
           </div>
         </div>
         
@@ -147,8 +142,18 @@
             <span class="breadcrumb-active" id="current-breadcrumb-path">Forex / Funded Accounts / FTMO / 10k</span>
           </div>
         </div>
-        <div class="header-actions">
-          <!-- Action buttons removed per request -->
+        <div class="header-actions" style="position: relative;">
+          <!-- Custom discreet trigger button with clock icon -->
+          <button class="sidebar-toggle-btn" id="filter-dropdown-trigger" onclick="toggleFilterDropdown(event)" aria-label="Time Filter" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(4px); cursor: pointer; transition: all 0.2s ease;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </button>
+          <!-- Custom luxury floating dropdown menu -->
+          <div id="filter-dropdown-menu" class="custom-dropdown-menu" style="position: absolute; right: 0; top: 44px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); padding: 8px; min-width: 160px; z-index: 1000; display: flex; flex-direction: column; gap: 4px;">
+            <!-- Options populated by JS -->
+          </div>
         </div>
       </header>
       
@@ -160,13 +165,95 @@
           
           <!-- Dashboard Analytics Row -->
           <div class="dashboard-row">
-            <!-- Left Column: Capital Chart -->
-            <section class="chart-panel chart-column">
-              <h2 class="panel-title">Equity Curve</h2>
-              <div class="chart-container">
-                <canvas id="equityChart"></canvas>
+            <!-- Left Column: Capital Chart & Trade Distribution -->
+            <!-- Left Column: Capital Chart & Risk KPIs -->
+            <div class="chart-column" style="display: flex; flex-direction: column; gap: 24px; flex: 1.6;">
+              <!-- 4 KPI Risk/Return Cards Row -->
+              <div class="kpi-risk-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; min-height: 120px; flex: none;">
+                <!-- KPI 1: Profit -->
+                <div class="kpi-card risk-card" style="padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+                  <div class="kpi-title" style="font-size: 0.65rem; color: var(--text-muted);">Profit</div>
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <span class="kpi-value" id="risk-monthly-profit" style="font-size: 1.25rem; font-weight: 800;">+$0.00</span>
+                    <span class="kpi-badge positive" id="risk-monthly-percent" style="font-size: 0.68rem; padding: 2px 6px; border-radius: 12px; font-weight: 700;">+0.0% MoM</span>
+                  </div>
+                  <div style="width: 100%;">
+                    <div style="height: 4px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 2px; overflow: visible; margin-bottom: 4px; position: relative;">
+                      <!-- Faint 5% Target Line in the middle -->
+                      <div style="position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: rgba(15, 23, 42, 0.2); z-index: 2;" title="Target 5%"></div>
+                      <!-- Actual Profit Progress Bar Fill -->
+                      <div id="risk-monthly-bar" style="height: 100%; width: 0%; background: #059669; border-radius: 2px; transition: width 0.3s ease; position: absolute; left: 0; top: 0; z-index: 1;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--text-muted);">
+                      <span id="risk-monthly-range-label">All Time</span>
+                      <span>Target 5%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- KPI 2: Max Daily Loss -->
+                <div class="kpi-card risk-card" style="padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+                  <div class="kpi-title" style="font-size: 0.65rem; color: var(--text-muted);">Max Daily Loss</div>
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <span class="kpi-value" id="risk-daily-loss" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">$0.00</span>
+                    <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;" id="risk-daily-loss-pct">0.0%</span>
+                  </div>
+                  <div style="width: 100%;">
+                    <div style="height: 4px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 2px; overflow: hidden; margin-bottom: 4px;">
+                      <div id="risk-daily-loss-bar" style="height: 100%; width: 0%; background: var(--danger); transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--text-muted);">
+                      <span>Worst Day</span>
+                      <span>Max 3%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- KPI 3: Max Loss vs Initial -->
+                <div class="kpi-card risk-card" style="padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+                  <div class="kpi-title" style="font-size: 0.65rem; color: var(--text-muted);">Max Loss vs Initial</div>
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <span class="kpi-value" id="risk-initial-drawdown" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">$0.00</span>
+                    <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;" id="risk-initial-drawdown-pct">0.0%</span>
+                  </div>
+                  <div style="width: 100%;">
+                    <div style="height: 4px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 2px; overflow: hidden; margin-bottom: 4px;">
+                      <div id="risk-initial-drawdown-bar" style="height: 100%; width: 0%; background: var(--danger); transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--text-muted);">
+                      <span>Lowest Point</span>
+                      <span>Max 10%</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- KPI 4: Max Drawdown (Peak) -->
+                <div class="kpi-card risk-card" style="padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;">
+                  <div class="kpi-title" style="font-size: 0.65rem; color: var(--text-muted);">MAX DD VS HIGHEST EQUITY</div>
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <span class="kpi-value" id="risk-peak-drawdown" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">$0.00</span>
+                    <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;" id="risk-peak-drawdown-pct">0.0%</span>
+                  </div>
+                  <div style="width: 100%;">
+                    <div style="height: 4px; width: 100%; background: rgba(0,0,0,0.05); border-radius: 2px; overflow: hidden; margin-bottom: 4px;">
+                      <div id="risk-peak-drawdown-bar" style="height: 100%; width: 0%; background: var(--danger); transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--text-muted);">
+                      <span>Peak to Trough</span>
+                      <span>Max 10%</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </section>
+
+              <!-- Card 2: Equity Curve -->
+              <section class="chart-panel" style="flex: 1; display: flex; flex-direction: column; gap: 16px; min-height: 400px;">
+                <h2 class="panel-title">Equity Curve</h2>
+                <div class="chart-container" style="flex: 1; min-height: 0;">
+                  <canvas id="equityChart"></canvas>
+                </div>
+              </section>
+            </div>
             
             <!-- Right Column: KPI Metrics Table -->
             <section class="chart-panel metrics-column">
@@ -248,6 +335,30 @@
                       <td>Max Consecutive Losses</td>
                       <td id="kpi-max-consec-losses" style="text-align: right; font-weight: 700;">0</td>
                     </tr>
+                    <tr>
+                      <td>Recovery Factor</td>
+                      <td id="kpi-recovery-factor" style="text-align: right; font-weight: 700;">N/A</td>
+                    </tr>
+                    <tr>
+                      <td>Kelly Criterion</td>
+                      <td id="kpi-kelly" style="text-align: right; font-weight: 700;">N/A</td>
+                    </tr>
+                    <tr>
+                      <td>Sharpe Ratio</td>
+                      <td id="kpi-sharpe" style="text-align: right; font-weight: 700;">N/A</td>
+                    </tr>
+                    <tr>
+                      <td>Long / Short Win Rate</td>
+                      <td id="kpi-long-short-wr" style="text-align: right; font-weight: 700;">0% / 0%</td>
+                    </tr>
+                    <tr>
+                      <td>Win / Loss Hold Ratio</td>
+                      <td id="kpi-hold-ratio" style="text-align: right; font-weight: 700;">N/A</td>
+                    </tr>
+                    <tr>
+                      <td>Profit Concentration</td>
+                      <td id="kpi-concentration" style="text-align: right; font-weight: 700;">0.0%</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -322,6 +433,27 @@
           
         </div>
         
+        <!-- LUXURY COMING SOON VIEW -->
+        <div id="view-coming-soon" class="view-panel" style="display: none; width: 100%;">
+          <div class="luxury-coming-soon-scene">
+            <!-- Floating ambient particles -->
+            <div class="cs-particle cs-p1"></div>
+            <div class="cs-particle cs-p2"></div>
+            <div class="cs-particle cs-p3"></div>
+            <div class="cs-particle cs-p4"></div>
+            <div class="cs-particle cs-p5"></div>
+            <!-- Main content -->
+            <div class="luxury-coming-soon-content">
+              <h1 class="luxury-cs-heading">
+                <span class="cs-letter" style="--i:0">C</span><span class="cs-letter" style="--i:1">O</span><span class="cs-letter" style="--i:2">M</span><span class="cs-letter" style="--i:3">I</span><span class="cs-letter" style="--i:4">N</span><span class="cs-letter" style="--i:5">G</span><span class="cs-letter cs-space"> </span><span class="cs-letter" style="--i:7">S</span><span class="cs-letter" style="--i:8">O</span><span class="cs-letter" style="--i:9">O</span><span class="cs-letter" style="--i:10">N</span>
+              </h1>
+              <div class="cs-line-divider">
+                <div class="cs-line-glow"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- STOCK VIEW (Under construction) -->
         <div id="view-stock" class="view-panel" style="display: none; width: 100%;">
           <div class="chart-panel empty-state">
