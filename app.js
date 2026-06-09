@@ -104,6 +104,9 @@ function switchAccount(accountId, breadcrumbText) {
     // Show top header on workspace view
     document.querySelector('.content-header').style.display = 'flex';
     
+    const filterTrigger = document.getElementById('filter-dropdown-trigger');
+    if (filterTrigger) filterTrigger.style.display = '';
+    
     // Re-render
     renderApp();
     showToast(`Switched to account ${ACCOUNTS_CONFIG[accountId].name}`, 'info');
@@ -135,21 +138,37 @@ function switchMainView(viewType, viewName) {
     item.classList.remove('active');
   });
   
-  document.getElementById('view-forex-account').style.display = 'none';
-  document.getElementById('view-stock').style.display = 'none';
-  document.getElementById('view-summary').style.display = 'none';
-  document.getElementById('view-coming-soon').style.display = 'flex';
-  
-  // Hide top header on Coming Soon view
-  document.querySelector('.content-header').style.display = 'none';
-  
-  // Restart letter animation
-  restartComingSoonAnimation();
-  
   if (viewType === 'stock') {
     document.getElementById('nav-stock').classList.add('active');
+    
+    document.getElementById('view-forex-account').style.display = 'none';
+    document.getElementById('view-stock').style.display = 'block';
+    document.getElementById('view-summary').style.display = 'none';
+    document.getElementById('view-coming-soon').style.display = 'none';
+    
+    document.querySelector('.content-header').style.display = 'none';
   } else if (viewType === 'summary') {
     document.getElementById('nav-summary').classList.add('active');
+    
+    document.getElementById('view-forex-account').style.display = 'none';
+    document.getElementById('view-stock').style.display = 'none';
+    document.getElementById('view-summary').style.display = 'block';
+    document.getElementById('view-coming-soon').style.display = 'none';
+    
+    // Show top header without the date range filter
+    document.querySelector('.content-header').style.display = 'flex';
+    const filterTrigger = document.getElementById('filter-dropdown-trigger');
+    if (filterTrigger) filterTrigger.style.display = 'none';
+    
+    renderSummaryView();
+  } else {
+    document.getElementById('view-forex-account').style.display = 'none';
+    document.getElementById('view-stock').style.display = 'none';
+    document.getElementById('view-summary').style.display = 'none';
+    document.getElementById('view-coming-soon').style.display = 'flex';
+    
+    document.querySelector('.content-header').style.display = 'none';
+    restartComingSoonAnimation();
   }
   
   document.getElementById('current-breadcrumb-path').innerText = viewName;
@@ -670,7 +689,7 @@ function updateKPIDom(stats) {
   const returnPercentEl = document.getElementById('risk-monthly-percent');
   if (returnPercentEl) {
     let labelSuffix = ' MoM';
-    if (activeHeaderTimeFilter === 'all') {
+    if (!dateRangeStart && !dateRangeEnd) {
       labelSuffix = ' Initial';
     }
     returnPercentEl.innerText = (profitVal >= 0 ? '+' : '') + returnPct.toFixed(1) + '%' + labelSuffix;
@@ -690,13 +709,17 @@ function updateKPIDom(stats) {
   
   const returnRangeLabelEl = document.getElementById('risk-monthly-range-label');
   if (returnRangeLabelEl) {
-    if (activeHeaderTimeFilter === 'all') {
+    if (!dateRangeStart && !dateRangeEnd) {
       returnRangeLabelEl.innerText = 'All Time';
     } else {
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const [year, monthStr] = activeHeaderTimeFilter.split('-');
-      const mIdx = parseInt(monthStr, 10) - 1;
-      returnRangeLabelEl.innerText = `${monthNames[mIdx]} ${year}`;
+      const fmtShort = (d) => d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '...';
+      if (!dateRangeStart) {
+        returnRangeLabelEl.innerText = `Until ${fmtShort(dateRangeEnd)}`;
+      } else if (!dateRangeEnd) {
+        returnRangeLabelEl.innerText = `From ${fmtShort(dateRangeStart)}`;
+      } else {
+        returnRangeLabelEl.innerText = `${fmtShort(dateRangeStart)} - ${fmtShort(dateRangeEnd)}`;
+      }
     }
   }
   
@@ -1114,6 +1137,13 @@ function onCalendarSelectChange() {
 }
 
 // --- Render Summary/Aggregate View ---
+function getTradesForAccount(accId) {
+  if (accId === 'ftmo-10k') {
+    return typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
+  }
+  return [];
+}
+
 async function renderSummaryView() {
   const tbody = document.getElementById('summary-table-body');
   tbody.innerHTML = '';
@@ -1123,71 +1153,80 @@ async function renderSummaryView() {
   let totalProfit = 0;
   let totalTrades = 0;
   
-  try {
-    const accountIds = Object.keys(ACCOUNTS_CONFIG);
-    const fetchPromises = accountIds.map(accId => 
-      fetch(`/api/trades?account=${accId}`)
-        .then(res => res.ok ? res.json() : Promise.reject(`Failed for ${accId}`))
-        .then(trades => ({ accId, trades }))
-    );
+  const accountIds = Object.keys(ACCOUNTS_CONFIG);
+  const results = [];
+  
+  for (const accId of accountIds) {
+    let trades = [];
+    try {
+      if (window.location.protocol !== 'file:') {
+        const res = await fetch(`/api/trades?account=${accId}`);
+        if (res.ok) {
+          trades = await res.json();
+        } else {
+          trades = getTradesForAccount(accId);
+        }
+      } else {
+        trades = getTradesForAccount(accId);
+      }
+    } catch (err) {
+      console.warn(`Could not fetch trades for ${accId} from server, using local fallback:`, err);
+      trades = getTradesForAccount(accId);
+    }
+    results.push({ accId, trades });
+  }
+  
+  results.forEach(({ accId, trades }) => {
+    const config = ACCOUNTS_CONFIG[accId];
+    const stats = calculateKPIs(config.capital, trades);
     
-    const results = await Promise.all(fetchPromises);
+    totalCapital += config.capital;
+    totalBalance += stats.balance;
+    totalProfit += stats.profit;
+    totalTrades += stats.totalTrades;
     
-    results.forEach(({ accId, trades }) => {
-      const config = ACCOUNTS_CONFIG[accId];
-      const stats = calculateKPIs(config.capital, trades);
-      
-      totalCapital += config.capital;
-      totalBalance += stats.balance;
-      totalProfit += stats.profit;
-      totalTrades += stats.totalTrades;
-      
-      const row = document.createElement('tr');
-      row.style.borderBottom = '1px solid var(--border-glass)';
-      row.style.transition = 'var(--transition-fast)';
-      row.addEventListener('mouseenter', () => {
-        row.style.background = 'rgba(0, 0, 0, 0.01)';
-      });
-      row.addEventListener('mouseleave', () => {
-        row.style.background = 'transparent';
-      });
-      
-      const profitClass = stats.profit >= 0 ? 'positive' : 'negative';
-      const statusText = stats.totalTrades > 0 ? 'Active' : 'Inactive';
-      const statusStyle = stats.totalTrades > 0 
-        ? 'color: var(--success-text); background: var(--success-glow); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:600;' 
-        : 'color: var(--text-muted); background: rgba(0,0,0,0.03); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;';
-        
-      const category = config.type === 'Personal' ? 'Personal Accounts' : 'Funded Accounts';
-      const breadcrumb = `Forex / ${category} / ${config.name}`;
-        
-      row.innerHTML = `
-        <td style="padding: 14px 20px; font-weight:600; color: var(--text-primary); cursor:pointer;" onclick="switchAccount('${accId}', '${breadcrumb}')">
-          ${config.name}
-          <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:normal;">Click to view details</span>
-        </td>
-        <td style="padding: 14px 20px; color: var(--text-secondary);">${formatCurrency(config.capital)}</td>
-        <td style="padding: 14px 20px; font-weight:600;">${formatCurrency(stats.balance)}</td>
-        <td style="padding: 14px 20px;" class="kpi-value ${profitClass}">${stats.profit >= 0 ? '+' : ''}${formatCurrency(stats.profit)}</td>
-        <td style="padding: 14px 20px; color: var(--text-secondary);">${stats.winrate.toFixed(0)}% (${stats.wins}/${stats.totalTrades})</td>
-        <td style="padding: 14px 20px;"><span style="${statusStyle}">${statusText}</span></td>
-      `;
-      
-      tbody.appendChild(row);
+    const row = document.createElement('tr');
+    row.style.borderBottom = '1px solid var(--border-glass)';
+    row.style.transition = 'var(--transition-fast)';
+    row.addEventListener('mouseenter', () => {
+      row.style.background = 'rgba(0, 0, 0, 0.01)';
+    });
+    row.addEventListener('mouseleave', () => {
+      row.style.background = 'transparent';
     });
     
-    document.getElementById('sum-initial-capital').innerText = formatCurrency(totalCapital);
-    document.getElementById('sum-balance').innerText = formatCurrency(totalBalance);
+    const profitClass = stats.profit >= 0 ? 'positive' : 'negative';
+    const statusText = stats.totalTrades > 0 ? 'Active' : 'Inactive';
+    const statusStyle = stats.totalTrades > 0 
+      ? 'color: var(--success-text); background: var(--success-glow); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:600;' 
+      : 'color: var(--text-muted); background: rgba(0,0,0,0.03); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;';
+      
+    const category = config.type === 'Personal' ? 'Personal Accounts' : 'Funded Accounts';
+    const breadcrumb = `Forex / ${category} / ${config.name}`;
+      
+    row.innerHTML = `
+      <td style="padding: 14px 20px; font-weight:600; color: var(--text-primary); cursor:pointer;" onclick="switchAccount('${accId}', '${breadcrumb}')">
+        ${config.name}
+        <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:normal;">Click to view details</span>
+      </td>
+      <td style="padding: 14px 20px; color: var(--text-secondary);">${formatCurrency(config.capital)}</td>
+      <td style="padding: 14px 20px; font-weight:600;">${formatCurrency(stats.balance)}</td>
+      <td style="padding: 14px 20px;" class="kpi-value ${profitClass}">${stats.profit >= 0 ? '+' : ''}${formatCurrency(stats.profit)}</td>
+      <td style="padding: 14px 20px; color: var(--text-secondary);">${stats.winrate.toFixed(0)}% (${stats.wins}/${stats.totalTrades})</td>
+      <td style="padding: 14px 20px;"><span style="${statusStyle}">${statusText}</span></td>
+    `;
     
-    const profitEl = document.getElementById('sum-profit');
-    profitEl.innerText = (totalProfit >= 0 ? '+' : '') + formatCurrency(totalProfit);
-    profitEl.className = 'kpi-value ' + (totalProfit >= 0 ? 'positive' : 'negative');
-    
-    document.getElementById('sum-total-trades').innerText = totalTrades;
-  } catch (err) {
-    console.error("Error synchronizing overview summary:", err);
-    showToast("Could not synchronize overview data!", "error");
-  }
+    tbody.appendChild(row);
+  });
+  
+  document.getElementById('sum-initial-capital').innerText = formatCurrency(totalCapital);
+  document.getElementById('sum-balance').innerText = formatCurrency(totalBalance);
+  
+  const profitEl = document.getElementById('sum-profit');
+  profitEl.innerText = (totalProfit >= 0 ? '+' : '') + formatCurrency(totalProfit);
+  profitEl.className = 'kpi-value ' + (totalProfit >= 0 ? 'positive' : 'negative');
+  
+  document.getElementById('sum-total-trades').innerText = totalTrades;
 }
 
 // --- Helpers ---
