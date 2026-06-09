@@ -148,7 +148,6 @@ function calculateKPIs(initialCapital, trades) {
   
   trades.forEach(t => {
     sumRR += parseFloat(t.rr || 0);
-    // Find duration from original payload if available (we will pass raw duration via API soon)
     sumDuration += parseFloat(t.duration || 0);
     if (t.amount > 0) {
       wins++;
@@ -169,6 +168,51 @@ function calculateKPIs(initialCapital, trades) {
   const avgRR = totalTrades > 0 ? sumRR / totalTrades : 0;
   const avgDuration = totalTrades > 0 ? sumDuration / totalTrades : 0;
   
+  // Calculate Peak-to-Trough Max Drawdown and Consecutive Streaks
+  const sortedTrades = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+  let peak = initialCapital;
+  let maxDDAmount = 0;
+  let maxDDPercent = 0;
+  let currentBalance = initialCapital;
+  
+  let currentWinsStreak = 0;
+  let currentLossesStreak = 0;
+  let maxWinsStreak = 0;
+  let maxLossesStreak = 0;
+  
+  sortedTrades.forEach(t => {
+    currentBalance += t.amount;
+    
+    // Drawdown calculation
+    if (currentBalance > peak) {
+      peak = currentBalance;
+    } else {
+      const ddAmount = peak - currentBalance;
+      const ddPercent = peak > 0 ? (ddAmount / peak) * 100 : 0;
+      if (ddAmount > maxDDAmount) {
+        maxDDAmount = ddAmount;
+      }
+      if (ddPercent > maxDDPercent) {
+        maxDDPercent = ddPercent;
+      }
+    }
+    
+    // Streak calculation
+    if (t.amount > 0) {
+      currentWinsStreak++;
+      currentLossesStreak = 0;
+      if (currentWinsStreak > maxWinsStreak) {
+        maxWinsStreak = currentWinsStreak;
+      }
+    } else if (t.amount < 0) {
+      currentLossesStreak++;
+      currentWinsStreak = 0;
+      if (currentLossesStreak > maxLossesStreak) {
+        maxLossesStreak = currentLossesStreak;
+      }
+    }
+  });
+  
   // Calculate Max Drawdown Duration (Time Balance stays below Initial Capital)
   const maxDDurationText = calculateMaxDrawdownDuration(initialCapital, trades);
   
@@ -186,7 +230,11 @@ function calculateKPIs(initialCapital, trades) {
     expectancy,
     profitFactor,
     avgDuration,
-    maxDDurationText
+    maxDDurationText,
+    maxDDAmount,
+    maxDDPercent,
+    maxWinsStreak,
+    maxLossesStreak
   };
 }
 
@@ -286,6 +334,15 @@ function updateKPIDom(stats) {
 
   // 14. Max Drawdown Duration
   document.getElementById('kpi-max-dd-duration').innerText = stats.maxDDurationText;
+
+  // 15. Max Drawdown ($ / %)
+  document.getElementById('kpi-max-dd-amount').innerText = `${formatCurrency(stats.maxDDAmount)} (${stats.maxDDPercent.toFixed(1)}%)`;
+
+  // 16. Max Consecutive Wins
+  document.getElementById('kpi-max-consec-wins').innerText = stats.maxWinsStreak;
+
+  // 17. Max Consecutive Losses
+  document.getElementById('kpi-max-consec-losses').innerText = stats.maxLossesStreak;
 }
 
 // --- Capital Growth / Drawdown Chart (Chart.js) ---

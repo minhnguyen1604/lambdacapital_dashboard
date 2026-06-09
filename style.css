@@ -524,7 +524,8 @@ body {
 
 .chart-container {
   position: relative;
-  height: 320px;
+  flex: 1;
+  min-height: 380px;
   width: 100%;
 }
 
