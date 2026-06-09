@@ -296,50 +296,38 @@ function renderCapitalChart(trades) {
     chartInstance.destroy();
   }
   
-  const targetYear = activeCalendarDate.getFullYear();
-  const targetMonth = activeCalendarDate.getMonth();
-  
+  const initialCapital = ACCOUNTS_CONFIG[currentAccountId].capital;
   const sortedTrades = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
   
-  // Calculate running net profit relative to 0 (where 0 represents start of the month)
-  let netProfit = 0;
+  const equityData = [initialCapital];
+  const labels = ['Start'];
   
-  const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-  const dailyProfits = [];
-  const labels = [];
-  
-  // Baseline start point at 0
-  labels.push('Start');
-  dailyProfits.push(0);
-  
-  const targetMonthStart = new Date(targetYear, targetMonth, 1);
-  
-  // Calculate daily progression inside this month
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dayStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayTrades = sortedTrades.filter(t => t.date === dayStr);
+  let currentEquity = initialCapital;
+  sortedTrades.forEach((trade, index) => {
+    currentEquity += trade.amount;
+    equityData.push(currentEquity);
     
-    if (dayTrades.length > 0) {
-      const dayNet = dayTrades.reduce((sum, t) => sum + t.amount, 0);
-      netProfit += dayNet;
-      labels.push(`Day ${day}`);
-      dailyProfits.push(netProfit);
-    } else {
-      const loopDate = new Date(targetYear, targetMonth, day);
-      if (loopDate <= SYSTEM_DATE || targetMonthStart < SYSTEM_DATE) {
-        labels.push(`Day ${day}`);
-        dailyProfits.push(netProfit);
+    let dateStr = '';
+    if (trade.date) {
+      const d = new Date(trade.date);
+      if (!isNaN(d.getTime())) {
+        dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } else {
+        dateStr = trade.date;
       }
+    } else {
+      dateStr = `Trade ${index + 1}`;
     }
-  }
+    labels.push(dateStr);
+  });
   
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        label: 'Net Profit / Drawdown ($)',
-        data: dailyProfits,
+        label: 'Equity ($)',
+        data: equityData,
         borderColor: '#ff7a00',
         borderWidth: 3,
         fill: true,
@@ -347,29 +335,29 @@ function renderCapitalChart(trades) {
         pointBackgroundColor: '#ff9130',
         pointBorderColor: 'rgba(255,255,255,0.8)',
         pointBorderWidth: 2,
-        pointRadius: dailyProfits.length > 15 ? 2 : 4,
+        pointRadius: equityData.length > 25 ? 1 : 3,
         pointHoverRadius: 6,
-        // Dynamic green above 0 and red below 0
+        // Dynamic green above initial capital and red below initial capital
         backgroundColor: function(context) {
           const chart = context.chart;
           const {ctx, chartArea} = chart;
           if (!chartArea) return null;
           
-          const zeroPixel = chart.scales.y.getPixelForValue(0);
+          const zeroPixel = chart.scales.y.getPixelForValue(initialCapital);
           const height = chartArea.bottom - chartArea.top;
           const zeroPos = (zeroPixel - chartArea.top) / height;
           
           const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
           
           if (zeroPos > 0 && zeroPos < 1) {
-            gradient.addColorStop(0, 'rgba(5, 150, 105, 0.18)'); // Green above 0
+            gradient.addColorStop(0, 'rgba(5, 150, 105, 0.18)'); // Green above initialCapital
             gradient.addColorStop(zeroPos - 0.01, 'rgba(5, 150, 105, 0.01)');
             gradient.addColorStop(zeroPos + 0.01, 'rgba(225, 29, 72, 0.01)');
-            gradient.addColorStop(1, 'rgba(225, 29, 72, 0.18)'); // Red below 0
+            gradient.addColorStop(1, 'rgba(225, 29, 72, 0.18)'); // Red below initialCapital
           } else if (zeroPos <= 0) {
-            return 'rgba(225, 29, 72, 0.15)'; // Entirely below 0
+            return 'rgba(225, 29, 72, 0.15)'; // Entirely below initialCapital
           } else {
-            return 'rgba(5, 150, 105, 0.15)'; // Entirely above 0
+            return 'rgba(5, 150, 105, 0.15)'; // Entirely above initialCapital
           }
           return gradient;
         }
@@ -391,9 +379,24 @@ function renderCapitalChart(trades) {
           padding: 12,
           displayColors: false,
           callbacks: {
+            title: function(context) {
+              const idx = context[0].dataIndex;
+              if (idx === 0) return 'Account Inception';
+              const t = sortedTrades[idx - 1];
+              const dir = t.direction ? t.direction.toUpperCase() : 'BUY';
+              return `Trade #${t.id || idx} | ${t.symbol || ''} ${dir}`;
+            },
             label: function(context) {
+              const idx = context.dataIndex;
               const val = context.parsed.y;
-              return `Profit/Drawdown: ${val >= 0 ? '+' : ''}${formatCurrency(val)}`;
+              let text = `Equity: ${formatCurrency(val)}`;
+              if (idx > 0) {
+                const t = sortedTrades[idx - 1];
+                const profit = t.amount;
+                text += `\nProfit: ${profit >= 0 ? '+' : ''}${formatCurrency(profit)}`;
+                if (t.date) text += `\nDate: ${t.date}`;
+              }
+              return text.split('\n');
             }
           }
         }
@@ -413,16 +416,18 @@ function renderCapitalChart(trades) {
           }
         },
         y: {
+          suggestedMin: initialCapital - (initialCapital * 0.02),
+          suggestedMax: initialCapital + (initialCapital * 0.02),
           grid: {
-            // Draw a bold red dashed zero-line to clearly demarcate the profit/loss threshold
+            // Draw a bold red dashed zero-line to clearly demarcate the initial capital threshold
             color: function(context) {
-              return context.tick.value === 0 ? '#e11d48' : 'rgba(0, 0, 0, 0.02)';
+              return context.tick.value === initialCapital ? '#e11d48' : 'rgba(0, 0, 0, 0.02)';
             },
             lineWidth: function(context) {
-              return context.tick.value === 0 ? 2 : 1;
+              return context.tick.value === initialCapital ? 2 : 1;
             },
             borderDash: function(context) {
-              return context.tick.value === 0 ? [5, 5] : [];
+              return context.tick.value === initialCapital ? [5, 5] : [];
             },
             borderColor: 'rgba(0, 0, 0, 0.04)'
           },
@@ -433,7 +438,7 @@ function renderCapitalChart(trades) {
               size: 11
             },
             callback: function(value) {
-              return (value >= 0 ? '+' : '') + formatCurrency(value);
+              return formatCurrency(value);
             }
           }
         }
@@ -450,11 +455,10 @@ function renderCalendar(trades) {
   const targetYear = activeCalendarDate.getFullYear();
   const targetMonth = activeCalendarDate.getMonth();
   
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June", 
-    "July", "August", "September", "October", "November", "December"
-  ];
-  document.getElementById('calendar-month-label').innerText = `${monthNames[targetMonth]} ${targetYear}`;
+  const monthSelect = document.getElementById('calendar-month-select');
+  const yearSelect = document.getElementById('calendar-year-select');
+  if (monthSelect) monthSelect.value = targetMonth;
+  if (yearSelect) yearSelect.value = targetYear;
   
   const firstDay = new Date(targetYear, targetMonth, 1);
   let startDayOfWeek = firstDay.getDay(); 
@@ -562,6 +566,17 @@ function adjustCalendarMonth(offset) {
 function goToToday() {
   activeCalendarDate = new Date(SYSTEM_DATE.getFullYear(), SYSTEM_DATE.getMonth(), 1);
   renderApp();
+}
+
+function onCalendarSelectChange() {
+  const monthSelect = document.getElementById('calendar-month-select');
+  const yearSelect = document.getElementById('calendar-year-select');
+  if (monthSelect && yearSelect) {
+    const month = parseInt(monthSelect.value);
+    const year = parseInt(yearSelect.value);
+    activeCalendarDate = new Date(year, month, 1);
+    renderApp();
+  }
 }
 
 // --- Render Summary/Aggregate View ---

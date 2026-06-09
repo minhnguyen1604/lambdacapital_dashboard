@@ -555,11 +555,28 @@ body {
   gap: 14px;
 }
 
-.calendar-month-title {
-  font-size: 1.15rem;
+.calendar-select {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
   font-weight: 600;
-  min-width: 160px;
-  text-align: center;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition-fast);
+}
+
+.calendar-select:hover {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.calendar-select:focus {
+  border-color: var(--accent-orange);
+  background: #ffffff;
 }
 
 .calendar-nav-btn {
