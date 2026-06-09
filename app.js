@@ -137,42 +137,29 @@ function switchMainView(viewType, viewName) {
   document.querySelectorAll('.nav-nested-item').forEach(item => {
     item.classList.remove('active');
   });
+  document.querySelectorAll('.nav-sub-item').forEach(item => {
+    item.classList.remove('active');
+  });
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.remove('active');
   });
   
   if (viewType === 'stock') {
     document.getElementById('nav-stock').classList.add('active');
-    
-    document.getElementById('view-forex-account').style.display = 'none';
-    document.getElementById('view-stock').style.display = 'block';
-    document.getElementById('view-summary').style.display = 'none';
-    document.getElementById('view-coming-soon').style.display = 'none';
-    
-    document.querySelector('.content-header').style.display = 'none';
   } else if (viewType === 'summary') {
     document.getElementById('nav-summary').classList.add('active');
-    
-    document.getElementById('view-forex-account').style.display = 'none';
-    document.getElementById('view-stock').style.display = 'none';
-    document.getElementById('view-summary').style.display = 'block';
-    document.getElementById('view-coming-soon').style.display = 'none';
-    
-    // Show top header without the date range filter
-    document.querySelector('.content-header').style.display = 'flex';
-    const filterTrigger = document.getElementById('filter-dropdown-trigger');
-    if (filterTrigger) filterTrigger.style.display = 'none';
-    
-    renderSummaryView();
-  } else {
-    document.getElementById('view-forex-account').style.display = 'none';
-    document.getElementById('view-stock').style.display = 'none';
-    document.getElementById('view-summary').style.display = 'none';
-    document.getElementById('view-coming-soon').style.display = 'flex';
-    
-    document.querySelector('.content-header').style.display = 'none';
-    restartComingSoonAnimation();
   }
+  
+  document.getElementById('view-forex-account').style.display = 'none';
+  document.getElementById('view-stock').style.display = 'none';
+  document.getElementById('view-summary').style.display = 'none';
+  document.getElementById('view-coming-soon').style.display = 'flex';
+  
+  // Hide top header on Coming Soon view
+  document.querySelector('.content-header').style.display = 'none';
+  
+  // Restart letter animation
+  restartComingSoonAnimation();
   
   document.getElementById('current-breadcrumb-path').innerText = viewName;
 }
