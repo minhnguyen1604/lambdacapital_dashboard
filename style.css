@@ -322,11 +322,60 @@ body {
 }
 
 .sidebar-collapsed .sidebar {
-  transform: translateX(-100%);
+  width: 72px;
 }
 
 .sidebar-collapsed .main-content {
-  margin-left: 0;
+  margin-left: 72px;
+}
+
+.sidebar-collapsed .brand-section {
+  padding: 22px 0;
+  justify-content: center;
+  gap: 0;
+}
+
+.sidebar-collapsed .brand-logo-container {
+  width: 40px;
+  height: 40px;
+}
+
+.sidebar-collapsed .brand-name {
+  display: none !important;
+}
+
+.sidebar-collapsed .nav-menu {
+  padding: 20px 8px;
+  align-items: center;
+}
+
+.sidebar-collapsed .nav-section-title {
+  display: none !important;
+}
+
+.sidebar-collapsed .nav-item {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.sidebar-collapsed .nav-item-icon {
+  gap: 0;
+  justify-content: center;
+}
+
+.sidebar-collapsed .nav-item-icon span {
+  display: none !important;
+}
+
+.sidebar-collapsed .nav-item-chevron {
+  display: none !important;
+}
+
+.sidebar-collapsed .nav-sub-list {
+  display: none !important;
 }
 
 /* Header Styles */
