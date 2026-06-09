@@ -146,156 +146,89 @@
         <!-- FOREEX / ACCOUNTS VIEW (Default) -->
         <div id="view-forex-account" class="view-panel" style="display: flex; flex-direction: column; gap: 24px; width: 100%;">
           
-          <!-- KPI Cards Grid -->
-          <section class="kpi-grid">
-            <!-- 1. Initial Capital -->
-            <div class="kpi-card">
-              <span class="kpi-title">Initial Capital</span>
-              <span class="kpi-value" id="kpi-initial-capital">$0.00</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge"><span class="trend-icon">▲</span> 0.0% QoQ</span>
-                <span class="kpi-badge"><span class="trend-icon">▲</span> 0.0% MoM</span>
+          <!-- Dashboard Analytics Row -->
+          <div class="dashboard-row">
+            <!-- Left Column: Capital Chart -->
+            <section class="chart-panel chart-column">
+              <h2 class="panel-title">Capital Growth / Drawdown Chart</h2>
+              <div class="chart-container" style="height: 380px;">
+                <canvas id="equityChart"></canvas>
               </div>
-            </div>
+            </section>
             
-            <!-- 2. Account Balance -->
-            <div class="kpi-card">
-              <span class="kpi-title">Account Balance</span>
-              <span class="kpi-value" id="kpi-balance">$0.00</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.5% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2.0% MoM</span>
+            <!-- Right Column: KPI Metrics Table -->
+            <section class="chart-panel metrics-column">
+              <h2 class="panel-title">Performance Metrics</h2>
+              <div style="width: 100%; display: flex; flex-direction: column; justify-content: center; height: 100%;">
+                <table class="metrics-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Metric</th>
+                      <th style="text-align: right;">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Initial Capital</td>
+                      <td id="kpi-initial-capital" style="text-align: right; font-weight: 700;">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td>Account Balance</td>
+                      <td id="kpi-balance" style="text-align: right; font-weight: 700;">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td>Net Profit</td>
+                      <td id="kpi-profit" style="text-align: right; font-weight: 700;">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td>Total Trades</td>
+                      <td id="kpi-total-trades" style="text-align: right; font-weight: 700;">0</td>
+                    </tr>
+                    <tr>
+                      <td>Win Trades</td>
+                      <td id="kpi-wins" style="text-align: right; font-weight: 700;" class="positive">0</td>
+                    </tr>
+                    <tr>
+                      <td>Loss Trades</td>
+                      <td id="kpi-losses" style="text-align: right; font-weight: 700;" class="negative">0</td>
+                    </tr>
+                    <tr>
+                      <td>Win Rate</td>
+                      <td id="kpi-winrate" style="text-align: right; font-weight: 700;">0%</td>
+                    </tr>
+                    <tr>
+                      <td>Avg. R:R</td>
+                      <td id="kpi-rr" style="text-align: right; font-weight: 700;">1:0.0</td>
+                    </tr>
+                    <tr>
+                      <td>Avg. Win</td>
+                      <td id="kpi-avg-win" style="text-align: right; font-weight: 700;" class="positive">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td>Avg. Loss</td>
+                      <td id="kpi-avg-loss" style="text-align: right; font-weight: 700;" class="negative">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td>Expectancy</td>
+                      <td id="kpi-expectancy" style="text-align: right; font-weight: 700;">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td>Profit Factor</td>
+                      <td id="kpi-profit-factor" style="text-align: right; font-weight: 700;">N/A</td>
+                    </tr>
+                    <tr>
+                      <td>Avg. Hold Time</td>
+                      <td id="kpi-avg-hold" style="text-align: right; font-weight: 700;">N/A</td>
+                    </tr>
+                    <tr>
+                      <td>Max Drawdown Duration</td>
+                      <td id="kpi-max-dd-duration" style="text-align: right; font-weight: 700;">0 days</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            </div>
-            
-            <!-- 3. Net Profit -->
-            <div class="kpi-card">
-              <span class="kpi-title">Net Profit</span>
-              <span class="kpi-value positive" id="kpi-profit">+$0.00</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 5.2% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2.0% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 4. Total Trades -->
-            <div class="kpi-card">
-              <span class="kpi-title">Total Trades</span>
-              <span class="kpi-value" id="kpi-total-trades">0</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 8% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 5% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 5. Win Trades -->
-            <div class="kpi-card">
-              <span class="kpi-title">Win Trades</span>
-              <span class="kpi-value positive" id="kpi-wins">0</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 10% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 6% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 6. Loss Trades -->
-            <div class="kpi-card">
-              <span class="kpi-title">Loss Trades</span>
-              <span class="kpi-value negative" id="kpi-losses">0</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 3% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 7. Win Rate -->
-            <div class="kpi-card">
-              <span class="kpi-title">Win Rate</span>
-              <span class="kpi-value" id="kpi-winrate">0%</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.8% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.5% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 8. Avg. R:R -->
-            <div class="kpi-card">
-              <span class="kpi-title">Avg. R:R</span>
-              <span class="kpi-value" id="kpi-rr">1:0.0</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.1 QoQ</span>
-                <span class="kpi-badge"><span class="trend-icon">▲</span> 0.0 MoM</span>
-              </div>
-            </div>
-            
-            <!-- 9. Avg. Win -->
-            <div class="kpi-card">
-              <span class="kpi-title">Avg. Win</span>
-              <span class="kpi-value positive" id="kpi-avg-win">+$0.00</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2.1% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.0% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 10. Avg. Loss -->
-            <div class="kpi-card">
-              <span class="kpi-title">Avg. Loss</span>
-              <span class="kpi-value negative" id="kpi-avg-loss">$0.00</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.5% QoQ</span>
-                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 2.1% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 11. Expectancy -->
-            <div class="kpi-card">
-              <span class="kpi-title">Expectancy</span>
-              <span class="kpi-value positive" id="kpi-expectancy">+$0.00</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 3.0% QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.5% MoM</span>
-              </div>
-            </div>
-            
-            <!-- 12. Profit Factor -->
-            <div class="kpi-card">
-              <span class="kpi-title">Profit Factor</span>
-              <span class="kpi-value" id="kpi-profit-factor">N/A</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.08 QoQ</span>
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.05 MoM</span>
-              </div>
-            </div>
-
-            <!-- 13. Avg. Hold Time -->
-            <div class="kpi-card">
-              <span class="kpi-title">Avg. Hold Time</span>
-              <span class="kpi-value" id="kpi-avg-hold">N/A</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 4.5% QoQ</span>
-                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 1.2% MoM</span>
-              </div>
-            </div>
-
-            <!-- 14. Max Drawdown Duration -->
-            <div class="kpi-card">
-              <span class="kpi-title">Max Drawdown Duration</span>
-              <span class="kpi-value" id="kpi-max-dd-duration">0 days</span>
-              <div class="kpi-badges">
-                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 8% QoQ</span>
-                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 12% MoM</span>
-              </div>
-            </div>
-          </section>
-          
-          <!-- Line Chart Section -->
-          <section class="chart-panel">
-            <h2 class="panel-title">Capital Growth / Drawdown Chart</h2>
-            <div class="chart-container">
-              <canvas id="equityChart"></canvas>
-            </div>
-          </section>
+            </section>
+          </div>
           
           <!-- Trading Calendar Section -->
           <section class="calendar-panel">

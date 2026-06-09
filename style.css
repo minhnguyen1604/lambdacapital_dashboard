@@ -908,3 +908,61 @@ table {
 th {
   color: var(--text-secondary);
 }
+
+/* Dashboard Analytics Layout Row */
+.dashboard-row {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+}
+
+.chart-column {
+  flex: 1.6;
+}
+
+.metrics-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Metrics Table Styling */
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.metrics-table tr {
+  border-bottom: 1px solid var(--border-glass);
+  transition: var(--transition-fast);
+}
+
+.metrics-table tr:last-child {
+  border-bottom: none;
+}
+
+.metrics-table tr:hover {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.metrics-table th {
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-glass-active);
+}
+
+.metrics-table td {
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-row {
+    flex-direction: column;
+  }
+}
