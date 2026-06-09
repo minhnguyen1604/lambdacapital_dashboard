@@ -1,4 +1,4 @@
-// LC Dashboard Application Logic
+// LC Dashboard Application Logic - SQLite Backend Driven
 
 // Configuration & Initial State
 const ACCOUNTS_CONFIG = {
@@ -20,67 +20,12 @@ let activeView = 'forex-account'; // 'forex-account', 'stock', 'summary'
 let activeCalendarDate = new Date('2026-06-01'); // Year/Month view state
 let chartInstance = null;
 
-// Default dummy data matching the user's photo and description
-const DEFAULT_TRADES = {
-  'ftmo-10k': [
-    { id: 't-10k-1', date: '2026-06-01', symbol: 'EURUSD', direction: 'BUY', amount: 201.67, rr: 2.0 }
-  ],
-  'ftmo-100k-1': [
-    { id: 't-100k1-1', date: '2026-06-02', symbol: 'GBPUSD', direction: 'BUY', amount: 1200.00, rr: 1.5 },
-    { id: 't-100k1-2', date: '2026-06-04', symbol: 'XAUUSD', direction: 'SELL', amount: -500.00, rr: 1.0 },
-    { id: 't-100k1-3', date: '2026-06-08', symbol: 'EURUSD', direction: 'BUY', amount: 800.00, rr: 2.0 }
-  ],
-  'ftmo-100k-2': [],
-  'ftmo-100k-3': [],
-  'ftmo-100k-4': [],
-  'the5ers-5k': [
-    { id: 't-5k-1', date: '2026-06-03', symbol: 'AUDUSD', direction: 'BUY', amount: 350.00, rr: 3.0 },
-    { id: 't-5k-2', date: '2026-06-05', symbol: 'USDJPY', direction: 'SELL', amount: -100.00, rr: 1.0 }
-  ],
-  'personal-1': [
-    { id: 't-p1-1', date: '2026-06-02', symbol: 'EURUSD', direction: 'BUY', amount: 150.00, rr: 1.5 },
-    { id: 't-p1-2', date: '2026-06-04', symbol: 'XAUUSD', direction: 'SELL', amount: 80.00, rr: 2.0 }
-  ],
-  'personal-2': [
-    { id: 't-p2-1', date: '2026-06-03', symbol: 'GBPUSD', direction: 'SELL', amount: -200.00, rr: 1.0 },
-    { id: 't-p2-2', date: '2026-06-06', symbol: 'EURUSD', direction: 'BUY', amount: 450.00, rr: 2.2 }
-  ]
-};
-
-// --- Local Storage Management ---
-function getTrades(accountId) {
-  const key = `lc_trades_${accountId}`;
-  const stored = localStorage.getItem(key);
-  if (!stored) {
-    // Seed default data
-    localStorage.setItem(key, JSON.stringify(DEFAULT_TRADES[accountId] || []));
-    return DEFAULT_TRADES[accountId] || [];
-  }
-  return JSON.parse(stored);
-}
-
-function saveTrade(accountId, trade) {
-  const trades = getTrades(accountId);
-  trades.push(trade);
-  localStorage.setItem(`lc_trades_${accountId}`, JSON.stringify(trades));
-}
-
-function clearAllTrades(accountId) {
-  localStorage.setItem(`lc_trades_${accountId}`, JSON.stringify([]));
-}
-
 // --- App Initializer ---
 document.addEventListener('DOMContentLoaded', () => {
   // Setup default active states in sidebar
   document.getElementById('forex-sub').style.maxHeight = '600px';
   document.getElementById('tkq-nested').style.maxHeight = '400px';
   document.getElementById('tkcn-nested').style.maxHeight = '0px'; // Collapse personal list initially
-  
-  // Set default form date to today
-  const dateInput = document.getElementById('trade-date');
-  if (dateInput) {
-    dateInput.value = '2026-06-09';
-  }
   
   // Render dashboard
   renderApp();
@@ -126,7 +71,6 @@ function switchAccount(accountId, breadcrumbText) {
   
   // Update breadcrumb
   document.getElementById('current-breadcrumb-path').innerHTML = breadcrumbText;
-  document.getElementById('btn-add-trade-trigger').style.display = 'inline-flex';
   
   // Re-render
   renderApp();
@@ -149,13 +93,11 @@ function switchMainView(viewType, viewName) {
     document.getElementById('view-forex-account').style.display = 'none';
     document.getElementById('view-stock').style.display = 'block';
     document.getElementById('view-summary').style.display = 'none';
-    document.getElementById('btn-add-trade-trigger').style.display = 'none';
   } else if (viewType === 'summary') {
     document.getElementById('nav-summary').classList.add('active');
     document.getElementById('view-forex-account').style.display = 'none';
     document.getElementById('view-stock').style.display = 'none';
     document.getElementById('view-summary').style.display = 'block';
-    document.getElementById('btn-add-trade-trigger').style.display = 'none';
     
     renderSummaryView();
   }
@@ -164,23 +106,34 @@ function switchMainView(viewType, viewName) {
 }
 
 // --- Data Render Functions ---
-function renderApp() {
+async function renderApp() {
   if (activeView !== 'forex-account') return;
   
-  const trades = getTrades(currentAccountId);
   const config = ACCOUNTS_CONFIG[currentAccountId];
   
-  // Calculate KPIs
-  const stats = calculateKPIs(config.capital, trades);
-  
-  // Render KPI values
-  updateKPIDom(stats);
-  
-  // Render Equity Chart
-  renderEquityChart(config.capital, trades);
-  
-  // Render Calendar
-  renderCalendar(trades);
+  try {
+    // Fetch trades from the SQLite server API
+    const response = await fetch(`/api/trades?account=${currentAccountId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const trades = await response.json();
+    
+    // Calculate KPIs
+    const stats = calculateKPIs(config.capital, trades);
+    
+    // Render KPI values
+    updateKPIDom(stats);
+    
+    // Render Equity Chart
+    renderEquityChart(config.capital, trades);
+    
+    // Render Calendar
+    renderCalendar(trades);
+  } catch (err) {
+    console.error("Lỗi tải dữ liệu từ database SQLite:", err);
+    showToast("Không thể kết nối cơ sở dữ liệu SQLite FTMO!", "error");
+  }
 }
 
 function calculateKPIs(initialCapital, trades) {
@@ -248,7 +201,7 @@ function updateKPIDom(stats) {
   
   // Average Loss
   const avgLossEl = document.getElementById('kpi-avg-loss');
-  avgLossEl.innerText = '-' + formatCurrency(stats.avgLoss);
+  avgLossEl.innerText = (stats.avgLoss > 0 ? '-' : '') + formatCurrency(stats.avgLoss);
   
   // Expectancy
   const expEl = document.getElementById('kpi-expectancy');
@@ -384,7 +337,8 @@ function renderEquityChart(initialCapital, trades) {
           ticks: {
             color: '#6b7280',
             font: {
-              family: 'Outfit'
+              family: 'Inter',
+              size: 11
             }
           }
         },
@@ -396,7 +350,8 @@ function renderEquityChart(initialCapital, trades) {
           ticks: {
             color: '#6b7280',
             font: {
-              family: 'Outfit'
+              family: 'Inter',
+              size: 11
             },
             callback: function(value) {
               return formatCurrency(value);
@@ -547,7 +502,7 @@ function goToToday() {
 }
 
 // --- Render Summary/Aggregate View ---
-function renderSummaryView() {
+async function renderSummaryView() {
   const tbody = document.getElementById('summary-table-body');
   tbody.innerHTML = '';
   
@@ -556,118 +511,73 @@ function renderSummaryView() {
   let totalProfit = 0;
   let totalTrades = 0;
   
-  Object.keys(ACCOUNTS_CONFIG).forEach(accId => {
-    const config = ACCOUNTS_CONFIG[accId];
-    const trades = getTrades(accId);
-    const stats = calculateKPIs(config.capital, trades);
+  try {
+    const accountIds = Object.keys(ACCOUNTS_CONFIG);
+    // Fetch trades for all accounts concurrently from SQLite database via API
+    const fetchPromises = accountIds.map(accId => 
+      fetch(`/api/trades?account=${accId}`)
+        .then(res => res.ok ? res.json() : Promise.reject(`Failed for ${accId}`))
+        .then(trades => ({ accId, trades }))
+    );
     
-    totalCapital += config.capital;
-    totalBalance += stats.balance;
-    totalProfit += stats.profit;
-    totalTrades += stats.totalTrades;
+    const results = await Promise.all(fetchPromises);
     
-    // Render row
-    const row = document.createElement('tr');
-    row.style.borderBottom = '1px solid var(--border-glass)';
-    row.style.transition = 'var(--transition-fast)';
-    row.addEventListener('mouseenter', () => {
-      row.style.background = 'rgba(0, 0, 0, 0.01)';
-    });
-    row.addEventListener('mouseleave', () => {
-      row.style.background = 'transparent';
-    });
-    
-    const profitClass = stats.profit >= 0 ? 'positive' : 'negative';
-    const statusText = stats.totalTrades > 0 ? 'Hoạt động' : 'Chưa giao dịch';
-    const statusStyle = stats.totalTrades > 0 
-      ? 'color: var(--success-text); background: var(--success-glow); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:600;' 
-      : 'color: var(--text-muted); background: rgba(0,0,0,0.03); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;';
+    results.forEach(({ accId, trades }) => {
+      const config = ACCOUNTS_CONFIG[accId];
+      const stats = calculateKPIs(config.capital, trades);
       
-    // Determine dynamic breadcrumb path categories
-    const category = config.type === 'Cá nhân' ? 'Tài khoản cá nhân' : 'Tài khoản quỹ';
-    const breadcrumb = `Forex / ${category} / ${config.name}`;
+      totalCapital += config.capital;
+      totalBalance += stats.balance;
+      totalProfit += stats.profit;
+      totalTrades += stats.totalTrades;
       
-    row.innerHTML = `
-      <td style="padding: 14px 20px; font-weight:600; color: var(--text-primary); cursor:pointer;" onclick="switchAccount('${accId}', '${breadcrumb}')">
-        ${config.name}
-        <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:normal;">Nhấp để xem chi tiết</span>
-      </td>
-      <td style="padding: 14px 20px; color: var(--text-secondary);">${formatCurrency(config.capital)}</td>
-      <td style="padding: 14px 20px; font-weight:600;">${formatCurrency(stats.balance)}</td>
-      <td style="padding: 14px 20px;" class="kpi-value ${profitClass}">${stats.profit >= 0 ? '+' : ''}${formatCurrency(stats.profit)}</td>
-      <td style="padding: 14px 20px; color: var(--text-secondary);">${stats.winrate.toFixed(0)}% (${stats.wins}/${stats.totalTrades})</td>
-      <td style="padding: 14px 20px;"><span style="${statusStyle}">${statusText}</span></td>
-    `;
-    
-    tbody.appendChild(row);
-  });
-  
-  // Update overall top metric widgets
-  document.getElementById('sum-initial-capital').innerText = formatCurrency(totalCapital);
-  document.getElementById('sum-balance').innerText = formatCurrency(totalBalance);
-  
-  const profitEl = document.getElementById('sum-profit');
-  profitEl.innerText = (totalProfit >= 0 ? '+' : '') + formatCurrency(totalProfit);
-  profitEl.className = 'kpi-value ' + (totalProfit >= 0 ? 'positive' : 'negative');
-  
-  document.getElementById('sum-total-trades').innerText = totalTrades;
-}
-
-// --- Action Operations (Modals & Forms) ---
-function openAddTradeModal() {
-  const modal = document.getElementById('add-trade-modal');
-  modal.classList.add('active');
-}
-
-// Close Modal
-function closeAddTradeModal() {
-  const modal = document.getElementById('add-trade-modal');
-  modal.classList.remove('active');
-}
-
-function submitTradeForm(event) {
-  event.preventDefault();
-  
-  const dateInput = document.getElementById('trade-date').value;
-  const symbolInput = document.getElementById('trade-symbol').value.toUpperCase();
-  const directionInput = document.getElementById('trade-direction').value;
-  const amountInput = parseFloat(document.getElementById('trade-amount').value);
-  const rrInput = parseFloat(document.getElementById('trade-rr').value);
-  
-  if (!dateInput || !symbolInput || isNaN(amountInput) || isNaN(rrInput)) {
-    showToast('Vui lòng điền đầy đủ thông tin hợp lệ!', 'error');
-    return;
-  }
-  
-  const newTrade = {
-    id: 't-' + Date.now(),
-    date: dateInput,
-    symbol: symbolInput,
-    direction: directionInput,
-    amount: amountInput,
-    rr: rrInput
-  };
-  
-  saveTrade(currentAccountId, newTrade);
-  renderApp();
-  closeAddTradeModal();
-  showToast(`Đã thêm giao dịch ${symbolInput} thành công!`, 'success');
-  
-  // Reset form inputs (excluding date for user speed)
-  document.getElementById('trade-symbol').value = '';
-  document.getElementById('trade-amount').value = '';
-  document.getElementById('trade-rr').value = '';
-}
-
-function resetDefaultData() {
-  if (confirm('Bạn có chắc chắn muốn khôi phục dữ liệu mặc định? Toàn bộ giao dịch mới thêm sẽ bị xóa.')) {
-    // Clear and restore DEFAULT_TRADES
-    Object.keys(ACCOUNTS_CONFIG).forEach(accId => {
-      localStorage.setItem(`lc_trades_${accId}`, JSON.stringify(DEFAULT_TRADES[accId] || []));
+      // Render row
+      const row = document.createElement('tr');
+      row.style.borderBottom = '1px solid var(--border-glass)';
+      row.style.transition = 'var(--transition-fast)';
+      row.addEventListener('mouseenter', () => {
+        row.style.background = 'rgba(0, 0, 0, 0.01)';
+      });
+      row.addEventListener('mouseleave', () => {
+        row.style.background = 'transparent';
+      });
+      
+      const profitClass = stats.profit >= 0 ? 'positive' : 'negative';
+      const statusText = stats.totalTrades > 0 ? 'Hoạt động' : 'Chưa giao dịch';
+      const statusStyle = stats.totalTrades > 0 
+        ? 'color: var(--success-text); background: var(--success-glow); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:600;' 
+        : 'color: var(--text-muted); background: rgba(0,0,0,0.03); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;';
+        
+      const category = config.type === 'Cá nhân' ? 'Tài khoản cá nhân' : 'Tài khoản quỹ';
+      const breadcrumb = `Forex / ${category} / ${config.name}`;
+        
+      row.innerHTML = `
+        <td style="padding: 14px 20px; font-weight:600; color: var(--text-primary); cursor:pointer;" onclick="switchAccount('${accId}', '${breadcrumb}')">
+          ${config.name}
+          <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:normal;">Nhấp để xem chi tiết</span>
+        </td>
+        <td style="padding: 14px 20px; color: var(--text-secondary);">${formatCurrency(config.capital)}</td>
+        <td style="padding: 14px 20px; font-weight:600;">${formatCurrency(stats.balance)}</td>
+        <td style="padding: 14px 20px;" class="kpi-value ${profitClass}">${stats.profit >= 0 ? '+' : ''}${formatCurrency(stats.profit)}</td>
+        <td style="padding: 14px 20px; color: var(--text-secondary);">${stats.winrate.toFixed(0)}% (${stats.wins}/${stats.totalTrades})</td>
+        <td style="padding: 14px 20px;"><span style="${statusStyle}">${statusText}</span></td>
+      `;
+      
+      tbody.appendChild(row);
     });
     
-    renderApp();
-    showToast('Khôi phục dữ liệu mặc định thành công!', 'success');
+    // Update overall top metric widgets
+    document.getElementById('sum-initial-capital').innerText = formatCurrency(totalCapital);
+    document.getElementById('sum-balance').innerText = formatCurrency(totalBalance);
+    
+    const profitEl = document.getElementById('sum-profit');
+    profitEl.innerText = (totalProfit >= 0 ? '+' : '') + formatCurrency(totalProfit);
+    profitEl.className = 'kpi-value ' + (totalProfit >= 0 ? 'positive' : 'negative');
+    
+    document.getElementById('sum-total-trades').innerText = totalTrades;
+  } catch (err) {
+    console.error("Lỗi đồng bộ dữ liệu tổng hợp:", err);
+    showToast("Không thể đồng bộ dữ liệu tổng hợp!", "error");
   }
 }
 

@@ -126,11 +126,6 @@
           </div>
         </div>
       </nav>
-      
-      <!-- Footer brand note -->
-      <div style="padding: 16px 24px; border-top: 1px solid var(--border-glass); font-size: 0.75rem; color: var(--text-muted); text-align: center;">
-        LC Dashboard v1.0.0
-      </div>
     </aside>
     
     <!-- Main Workspace -->
@@ -138,26 +133,10 @@
       <!-- Content Header -->
       <header class="content-header">
         <div class="breadcrumbs">
-          <span>LC Dashboard</span>
-          <span class="breadcrumb-separator">/</span>
           <span class="breadcrumb-active" id="current-breadcrumb-path">Forex / Tài khoản quỹ / FTMO / 10k</span>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary" onclick="resetDefaultData()">
-            <!-- Reset Icon -->
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
-            </svg>
-            Reset Dữ Liệu
-          </button>
-          <button class="btn btn-primary" onclick="openAddTradeModal()" id="btn-add-trade-trigger">
-            <!-- Plus Icon -->
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Thêm Giao Dịch
-          </button>
+          <!-- Action buttons removed per request -->
         </div>
       </header>
       
@@ -173,78 +152,138 @@
             <div class="kpi-card">
               <span class="kpi-title">Vốn ban đầu</span>
               <span class="kpi-value" id="kpi-initial-capital">$10,000.00</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge"><span class="trend-icon">▲</span> 0.0% YoY</span>
+                <span class="kpi-badge"><span class="trend-icon">▲</span> 0.0% QoQ</span>
+                <span class="kpi-badge"><span class="trend-icon">▲</span> 0.0% MoM</span>
+              </div>
             </div>
             
             <!-- 2. Số dư tài khoản -->
             <div class="kpi-card">
               <span class="kpi-title">Số dư tài khoản</span>
               <span class="kpi-value" id="kpi-balance">$10,201.67</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2.0% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.5% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2.0% MoM</span>
+              </div>
             </div>
             
             <!-- 3. Lợi nhuận -->
             <div class="kpi-card">
               <span class="kpi-title">Lợi nhuận</span>
               <span class="kpi-value positive" id="kpi-profit">+$201.67</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 8.4% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 5.2% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2.0% MoM</span>
+              </div>
             </div>
             
             <!-- 4. Số lệnh -->
             <div class="kpi-card">
               <span class="kpi-title">Số lệnh</span>
               <span class="kpi-value" id="kpi-total-trades">1</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 12% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 8% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 5% MoM</span>
+              </div>
             </div>
             
             <!-- 5. Số lệnh thắng -->
             <div class="kpi-card">
               <span class="kpi-title">Số lệnh thắng</span>
               <span class="kpi-value positive" id="kpi-wins">1</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 15% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 10% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 6% MoM</span>
+              </div>
             </div>
             
             <!-- 6. Số lệnh thua -->
             <div class="kpi-card">
               <span class="kpi-title">Số lệnh thua</span>
               <span class="kpi-value negative" id="kpi-losses">0</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 5% YoY</span>
+                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 3% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2% MoM</span>
+              </div>
             </div>
             
             <!-- 7. Winrate -->
             <div class="kpi-card">
               <span class="kpi-title">Winrate</span>
               <span class="kpi-value" id="kpi-winrate">100%</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.2% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.8% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.5% MoM</span>
+              </div>
             </div>
             
             <!-- 8. R:R -->
             <div class="kpi-card">
               <span class="kpi-title">R:R trung bình</span>
               <span class="kpi-value" id="kpi-rr">1:2.0</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.2 YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.1 QoQ</span>
+                <span class="kpi-badge"><span class="trend-icon">▲</span> 0.0 MoM</span>
+              </div>
             </div>
             
             <!-- 9. Lợi nhuận trung bình -->
             <div class="kpi-card">
               <span class="kpi-title">Lợi nhuận TB</span>
               <span class="kpi-value positive" id="kpi-avg-win">+$201.67</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 3.5% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 2.1% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.0% MoM</span>
+              </div>
             </div>
             
             <!-- 10. Khoản lỗ trung bình -->
             <div class="kpi-card">
               <span class="kpi-title">Khoản lỗ TB</span>
               <span class="kpi-value negative" id="kpi-avg-loss">$0.00</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 1.8% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.5% QoQ</span>
+                <span class="kpi-badge negative"><span class="trend-icon">▼</span> 2.1% MoM</span>
+              </div>
             </div>
             
             <!-- 11. Kỳ vọng -->
             <div class="kpi-card">
               <span class="kpi-title">Kỳ vọng (Expectancy)</span>
               <span class="kpi-value positive" id="kpi-expectancy">+$201.67</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 4.2% YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 3.0% QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 1.5% MoM</span>
+              </div>
             </div>
             
             <!-- 12. Hệ số lợi nhuận -->
             <div class="kpi-card">
               <span class="kpi-title">Hệ số lợi nhuận</span>
               <span class="kpi-value" id="kpi-profit-factor">N/A</span>
+              <div class="kpi-badges">
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.15 YoY</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.08 QoQ</span>
+                <span class="kpi-badge positive"><span class="trend-icon">▲</span> 0.05 MoM</span>
+              </div>
             </div>
           </section>
           
           <!-- Line Chart Section -->
           <section class="chart-panel">
-            <h2 class="panel-title">Biểu đồ tăng trưởng Equity (Tháng này)</h2>
+            <h2 class="panel-title">Biểu đồ tăng trưởng Equity</h2>
             <div class="chart-container">
               <canvas id="equityChart"></canvas>
             </div>

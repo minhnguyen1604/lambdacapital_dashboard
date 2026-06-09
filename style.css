@@ -105,39 +105,45 @@ body {
 }
 
 .brand-section {
-  padding: 24px;
+  padding: 22px 24px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   border-bottom: 1px solid var(--border-glass);
 }
 
 .brand-logo-container {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  transition: var(--transition-fast);
+}
+
+.brand-logo-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
 .brand-logo {
-  width: 85%;
-  height: auto;
+  width: 90%;
+  height: 90%;
   object-fit: contain;
 }
 
 .brand-name {
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #111827 60%, var(--text-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 /* Nav Menu Styles */
@@ -444,6 +450,43 @@ body {
 
 .kpi-value.negative {
   color: var(--danger-text);
+}
+
+.kpi-badges {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.kpi-badge {
+  font-size: 0.64rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 2px 6px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.kpi-badge.positive {
+  color: var(--success-text);
+  background: var(--success-glow);
+  border-color: rgba(5, 150, 105, 0.12);
+}
+
+.kpi-badge.negative {
+  color: var(--danger-text);
+  background: var(--danger-glow);
+  border-color: rgba(225, 29, 72, 0.12);
+}
+
+.kpi-badge .trend-icon {
+  font-size: 0.55rem;
 }
 
 /* Charts Section */
