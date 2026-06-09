@@ -42,10 +42,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 
-                # Fetch trades for the requested account from SQLite
+                # Fetch trades for the requested account from SQLite including duration
                 cursor.execute("""
                     SELECT id, trade_id, open_time, close_time, type, 
-                           symbol, net_profit, rr 
+                           symbol, net_profit, rr, duration 
                     FROM trades 
                     WHERE account_id = ?
                     ORDER BY date(close_time) ASC, close_time ASC
@@ -69,7 +69,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         'symbol': row['symbol'],
                         'direction': row['type'].upper() if row['type'] else 'BUY',
                         'amount': row['net_profit'] or 0.0,
-                        'rr': row['rr'] or 2.0
+                        'rr': row['rr'] or 2.0,
+                        'duration': row['duration'] or 0
                     })
                     
                 conn.close()

@@ -1,4 +1,4 @@
-// LC Dashboard Application Logic - SQLite Backend Driven
+// LC Dashboard Application Logic - SQLite Backend Driven (English Edition)
 
 // Configuration & Initial State
 const ACCOUNTS_CONFIG = {
@@ -8,8 +8,8 @@ const ACCOUNTS_CONFIG = {
   'ftmo-100k-3': { name: 'FTMO 100k #3', capital: 100000, type: 'FTMO' },
   'ftmo-100k-4': { name: 'FTMO 100k #4', capital: 100000, type: 'FTMO' },
   'the5ers-5k': { name: 'The5ers 5k', capital: 5000, type: 'The5ers' },
-  'personal-1': { name: 'Personal Acc #1', capital: 5000, type: 'Cá nhân' },
-  'personal-2': { name: 'Personal Acc #2', capital: 10000, type: 'Cá nhân' }
+  'personal-1': { name: 'Personal Acc #1', capital: 5000, type: 'Personal' },
+  'personal-2': { name: 'Personal Acc #2', capital: 10000, type: 'Personal' }
 };
 
 // System current date (hardcoded to June 9, 2026 to match the user's screenshot context)
@@ -74,9 +74,10 @@ function switchAccount(accountId, breadcrumbText) {
   
   // Re-render
   renderApp();
-  showToast(`Đã chuyển sang tài khoản ${ACCOUNTS_CONFIG[accountId].name}`, 'info');
+  showToast(`Switched to account ${ACCOUNTS_CONFIG[accountId].name}`, 'info');
 }
 
+// Switch main section
 function switchMainView(viewType, viewName) {
   activeView = viewType;
   
@@ -125,14 +126,14 @@ async function renderApp() {
     // Render KPI values
     updateKPIDom(stats);
     
-    // Render Equity Chart
-    renderEquityChart(config.capital, trades);
+    // Render Capital Growth / Drawdown Chart
+    renderCapitalChart(trades);
     
     // Render Calendar
     renderCalendar(trades);
   } catch (err) {
-    console.error("Lỗi tải dữ liệu từ database SQLite:", err);
-    showToast("Không thể kết nối cơ sở dữ liệu SQLite FTMO!", "error");
+    console.error("Error loading account data from SQLite:", err);
+    showToast("Could not connect to SQLite database!", "error");
   }
 }
 
@@ -143,9 +144,12 @@ function calculateKPIs(initialCapital, trades) {
   let totalWinAmount = 0;
   let totalLossAmount = 0;
   let sumRR = 0;
+  let sumDuration = 0;
   
   trades.forEach(t => {
     sumRR += parseFloat(t.rr || 0);
+    // Find duration from original payload if available (we will pass raw duration via API soon)
+    sumDuration += parseFloat(t.duration || 0);
     if (t.amount > 0) {
       wins++;
       totalWinAmount += t.amount;
@@ -163,6 +167,10 @@ function calculateKPIs(initialCapital, trades) {
   const expectancy = totalTrades > 0 ? profit / totalTrades : 0;
   const profitFactor = totalLossAmount > 0 ? totalWinAmount / totalLossAmount : (totalWinAmount > 0 ? Infinity : 0);
   const avgRR = totalTrades > 0 ? sumRR / totalTrades : 0;
+  const avgDuration = totalTrades > 0 ? sumDuration / totalTrades : 0;
+  
+  // Calculate Max Drawdown Duration (Time Balance stays below Initial Capital)
+  const maxDDurationText = calculateMaxDrawdownDuration(initialCapital, trades);
   
   return {
     initialCapital,
@@ -176,8 +184,63 @@ function calculateKPIs(initialCapital, trades) {
     avgWin,
     avgLoss,
     expectancy,
-    profitFactor
+    profitFactor,
+    avgDuration,
+    maxDDurationText
   };
+}
+
+// Calculate max drawdown duration
+function calculateMaxDrawdownDuration(initialCapital, trades) {
+  const sortedTrades = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+  let balance = initialCapital;
+  let drawdownStart = null;
+  let maxDurationDays = 0;
+  
+  sortedTrades.forEach(t => {
+    const prevBalance = balance;
+    balance += t.amount;
+    
+    // We parse the trade date. E.g. '2026-06-01'
+    const tDate = new Date(t.date);
+    
+    if (balance < initialCapital && prevBalance >= initialCapital) {
+      // Drawdown starts
+      drawdownStart = tDate;
+    } else if (balance >= initialCapital && prevBalance < initialCapital && drawdownStart) {
+      // Drawdown ends
+      const durationMs = tDate - drawdownStart;
+      const durationDays = durationMs / (1000 * 60 * 60 * 24);
+      if (durationDays > maxDurationDays) {
+        maxDurationDays = durationDays;
+      }
+      drawdownStart = null;
+    }
+  });
+  
+  // If currently still in drawdown at the end of the history
+  if (drawdownStart) {
+    const durationMs = SYSTEM_DATE - drawdownStart;
+    const durationDays = durationMs / (1000 * 60 * 60 * 24);
+    if (durationDays > maxDurationDays) {
+      maxDurationDays = durationDays;
+    }
+  }
+  
+  if (maxDurationDays === 0) return '0 days';
+  return `${Math.round(maxDurationDays)} days`;
+}
+
+// Format duration helper
+function formatDuration(seconds) {
+  if (!seconds || isNaN(seconds) || seconds <= 0) return 'N/A';
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} mins`;
+  const hours = mins / 60;
+  if (hours < 24) return `${hours.toFixed(1)} hrs`;
+  const days = hours / 24;
+  return `${days.toFixed(1)} days`;
 }
 
 function updateKPIDom(stats) {
@@ -217,93 +280,99 @@ function updateKPIDom(stats) {
   } else {
     pfEl.innerText = stats.profitFactor.toFixed(2);
   }
+
+  // 13. Average Hold Time
+  document.getElementById('kpi-avg-hold').innerText = formatDuration(stats.avgDuration);
+
+  // 14. Max Drawdown Duration
+  document.getElementById('kpi-max-dd-duration').innerText = stats.maxDDurationText;
 }
 
-// --- Equity Chart (Chart.js) ---
-function renderEquityChart(initialCapital, trades) {
+// --- Capital Growth / Drawdown Chart (Chart.js) ---
+function renderCapitalChart(trades) {
   const ctx = document.getElementById('equityChart').getContext('2d');
   
-  // Destroy old instance to prevent overlay bugs
   if (chartInstance) {
     chartInstance.destroy();
   }
   
-  // Get active month and year
   const targetYear = activeCalendarDate.getFullYear();
-  const targetMonth = activeCalendarDate.getMonth(); // 0-indexed
+  const targetMonth = activeCalendarDate.getMonth();
   
-  // Filter trades that happened in or before this month to calculate equity timeline
-  // Sort trades by date
   const sortedTrades = [...trades].sort((a, b) => new Date(a.date) - new Date(b.date));
   
-  // Calculate historical balance leading up to this month
-  let balance = initialCapital;
+  // Calculate running net profit relative to 0 (where 0 represents start of the month)
+  let netProfit = 0;
   
-  // Group trades by day in the target month, and compute cumulative balance
   const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-  const dailyBalances = [];
+  const dailyProfits = [];
   const labels = [];
   
-  // Initialize baseline balance (sum of all trades prior to this month)
+  // Baseline start point at 0
+  labels.push('Start');
+  dailyProfits.push(0);
+  
   const targetMonthStart = new Date(targetYear, targetMonth, 1);
   
-  sortedTrades.forEach(t => {
-    const tDate = new Date(t.date);
-    if (tDate < targetMonthStart) {
-      balance += t.amount;
-    }
-  });
-  
-  // Starting point of the chart: day 0 (representing the balance before the month starts)
-  labels.push('Đầu tháng');
-  dailyBalances.push(balance);
-  
-  // Calculate daily progression inside target month
+  // Calculate daily progression inside this month
   for (let day = 1; day <= daysInMonth; day++) {
     const dayStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dayTrades = sortedTrades.filter(t => t.date === dayStr);
     
     if (dayTrades.length > 0) {
       const dayNet = dayTrades.reduce((sum, t) => sum + t.amount, 0);
-      balance += dayNet;
-      labels.push(`Ngày ${day}`);
-      dailyBalances.push(balance);
+      netProfit += dayNet;
+      labels.push(`Day ${day}`);
+      dailyProfits.push(netProfit);
     } else {
-      // If there are no trades on this day, we only push a data point if it's prior to or equal to Today 
-      // (so we don't draw flat lines into the future)
       const loopDate = new Date(targetYear, targetMonth, day);
       if (loopDate <= SYSTEM_DATE || targetMonthStart < SYSTEM_DATE) {
-        // Just maintain current balance
-        labels.push(`Ngày ${day}`);
-        dailyBalances.push(balance);
+        labels.push(`Day ${day}`);
+        dailyProfits.push(netProfit);
       }
     }
   }
-  
-  // Premium Light Orange Gradient for LC brand
-  const chartGradient = ctx.createLinearGradient(0, 0, 0, 300);
-  chartGradient.addColorStop(0, 'rgba(255, 122, 0, 0.2)');
-  chartGradient.addColorStop(1, 'rgba(255, 122, 0, 0.0)');
   
   chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        label: 'Tài sản (Equity)',
-        data: dailyBalances,
+        label: 'Net Profit / Drawdown ($)',
+        data: dailyProfits,
         borderColor: '#ff7a00',
         borderWidth: 3,
-        backgroundColor: chartGradient,
         fill: true,
         tension: 0.35,
         pointBackgroundColor: '#ff9130',
         pointBorderColor: 'rgba(255,255,255,0.8)',
         pointBorderWidth: 2,
-        pointRadius: dailyBalances.length > 15 ? 2 : 4,
+        pointRadius: dailyProfits.length > 15 ? 2 : 4,
         pointHoverRadius: 6,
-        shadowColor: 'rgba(255, 122, 0, 0.2)',
-        shadowBlur: 8
+        // Dynamic green above 0 and red below 0
+        backgroundColor: function(context) {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          if (!chartArea) return null;
+          
+          const zeroPixel = chart.scales.y.getPixelForValue(0);
+          const height = chartArea.bottom - chartArea.top;
+          const zeroPos = (zeroPixel - chartArea.top) / height;
+          
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          
+          if (zeroPos > 0 && zeroPos < 1) {
+            gradient.addColorStop(0, 'rgba(5, 150, 105, 0.18)'); // Green above 0
+            gradient.addColorStop(zeroPos - 0.01, 'rgba(5, 150, 105, 0.01)');
+            gradient.addColorStop(zeroPos + 0.01, 'rgba(225, 29, 72, 0.01)');
+            gradient.addColorStop(1, 'rgba(225, 29, 72, 0.18)'); // Red below 0
+          } else if (zeroPos <= 0) {
+            return 'rgba(225, 29, 72, 0.15)'; // Entirely below 0
+          } else {
+            return 'rgba(5, 150, 105, 0.15)'; // Entirely above 0
+          }
+          return gradient;
+        }
       }]
     },
     options: {
@@ -323,7 +392,8 @@ function renderEquityChart(initialCapital, trades) {
           displayColors: false,
           callbacks: {
             label: function(context) {
-              return `Equity: ${formatCurrency(context.parsed.y)}`;
+              const val = context.parsed.y;
+              return `Profit/Drawdown: ${val >= 0 ? '+' : ''}${formatCurrency(val)}`;
             }
           }
         }
@@ -344,7 +414,16 @@ function renderEquityChart(initialCapital, trades) {
         },
         y: {
           grid: {
-            color: 'rgba(0, 0, 0, 0.02)',
+            // Draw a bold red dashed zero-line to clearly demarcate the profit/loss threshold
+            color: function(context) {
+              return context.tick.value === 0 ? '#e11d48' : 'rgba(0, 0, 0, 0.02)';
+            },
+            lineWidth: function(context) {
+              return context.tick.value === 0 ? 2 : 1;
+            },
+            borderDash: function(context) {
+              return context.tick.value === 0 ? [5, 5] : [];
+            },
             borderColor: 'rgba(0, 0, 0, 0.04)'
           },
           ticks: {
@@ -354,7 +433,7 @@ function renderEquityChart(initialCapital, trades) {
               size: 11
             },
             callback: function(value) {
-              return formatCurrency(value);
+              return (value >= 0 ? '+' : '') + formatCurrency(value);
             }
           }
         }
@@ -371,44 +450,34 @@ function renderCalendar(trades) {
   const targetYear = activeCalendarDate.getFullYear();
   const targetMonth = activeCalendarDate.getMonth();
   
-  // Set month label
   const monthNames = [
-    'Tháng Một', 'Tháng Hai', 'Tháng Ba', 'Tháng Tư', 'Tháng Năm', 'Tháng Sáu',
-    'Tháng Bảy', 'Tháng Tám', 'Tháng Chín', 'Tháng Mười', 'Tháng Mười Một', 'Tháng Mười Hai'
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
   ];
   document.getElementById('calendar-month-label').innerText = `${monthNames[targetMonth]} ${targetYear}`;
   
-  // First day of target month
   const firstDay = new Date(targetYear, targetMonth, 1);
-  // Get weekday of first day. 0 = Sun, 1 = Mon... 
-  // We want Monday as index 0, Tuesday index 1 ... Sunday index 6
-  let startDayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Mon, 6 = Sat
+  let startDayOfWeek = firstDay.getDay(); 
   startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // Map Sunday to 6, Monday to 0
   
-  // Days in current month
   const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
-  
-  // Days in previous month
   const daysInPrevMonth = new Date(targetYear, targetMonth, 0).getDate();
   
-  // Active calendar stat calculation (inside this month only)
   let monthNetProfit = 0;
   const uniqueTradingDays = new Set();
   
-  // Generate days from previous month
+  // Previous month padding cells
   for (let i = startDayOfWeek - 1; i >= 0; i--) {
     const prevDayNum = daysInPrevMonth - i;
     const prevDateStr = `${targetMonth === 0 ? targetYear - 1 : targetYear}-${String(targetMonth === 0 ? 12 : targetMonth).padStart(2, '0')}-${String(prevDayNum).padStart(2, '0')}`;
-    
     const cell = createDayCell(prevDayNum, prevDateStr, true, trades);
     container.appendChild(cell);
   }
   
-  // Generate days of current month
+  // Current month active cells
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
-    // Check if there are trades on this day and update stats
     const dayTrades = trades.filter(t => t.date === dateStr);
     if (dayTrades.length > 0) {
       const net = dayTrades.reduce((sum, t) => sum + t.amount, 0);
@@ -422,7 +491,7 @@ function renderCalendar(trades) {
     container.appendChild(cell);
   }
   
-  // Fill the remaining grid cells with next month's days to keep grid uniform
+  // Next month padding cells
   const totalCells = startDayOfWeek + daysInMonth;
   const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
   
@@ -432,12 +501,11 @@ function renderCalendar(trades) {
     container.appendChild(cell);
   }
   
-  // Update Calendar Header Stat elements
+  // Update Calendar Header stats
   const statProfitEl = document.getElementById('cal-stat-profit');
   statProfitEl.innerText = (monthNetProfit >= 0 ? '+' : '') + formatCurrency(monthNetProfit);
   statProfitEl.className = monthNetProfit >= 0 ? 'calendar-stat-badge profit' : 'calendar-stat-badge profit negative';
   
-  // Adjust parent background color if negative
   const statProfitParent = statProfitEl.closest('.calendar-stat-badge');
   if (monthNetProfit >= 0) {
     statProfitParent.style.background = 'var(--success-glow)';
@@ -458,29 +526,25 @@ function createDayCell(dayNum, dateStr, isOtherMonth, allTrades, isToday = false
   if (isOtherMonth) cell.classList.add('other-month');
   if (isToday) cell.classList.add('today');
   
-  // Day number label
   const numSpan = document.createElement('span');
   numSpan.className = 'calendar-day-number';
   numSpan.innerText = dayNum;
   cell.appendChild(numSpan);
   
-  // Filter trades for this day
   const dayTrades = allTrades.filter(t => t.date === dateStr);
   
   if (dayTrades.length > 0) {
     const dayData = document.createElement('div');
     dayData.className = 'calendar-day-data';
     
-    // Net profit for this day
     const netProfit = dayTrades.reduce((sum, t) => sum + t.amount, 0);
     const profitSpan = document.createElement('span');
     profitSpan.className = 'calendar-day-profit ' + (netProfit >= 0 ? 'positive' : 'negative');
     profitSpan.innerText = (netProfit >= 0 ? '+' : '') + formatCurrency(netProfit);
     
-    // Count of trades
     const countSpan = document.createElement('span');
     countSpan.className = 'calendar-day-count';
-    countSpan.innerText = `Các giao dịch: ${dayTrades.length}`;
+    countSpan.innerText = `Trades: ${dayTrades.length}`;
     
     dayData.appendChild(profitSpan);
     dayData.appendChild(countSpan);
@@ -495,7 +559,6 @@ function adjustCalendarMonth(offset) {
   renderApp();
 }
 
-// Today navigation
 function goToToday() {
   activeCalendarDate = new Date(SYSTEM_DATE.getFullYear(), SYSTEM_DATE.getMonth(), 1);
   renderApp();
@@ -513,7 +576,6 @@ async function renderSummaryView() {
   
   try {
     const accountIds = Object.keys(ACCOUNTS_CONFIG);
-    // Fetch trades for all accounts concurrently from SQLite database via API
     const fetchPromises = accountIds.map(accId => 
       fetch(`/api/trades?account=${accId}`)
         .then(res => res.ok ? res.json() : Promise.reject(`Failed for ${accId}`))
@@ -531,7 +593,6 @@ async function renderSummaryView() {
       totalProfit += stats.profit;
       totalTrades += stats.totalTrades;
       
-      // Render row
       const row = document.createElement('tr');
       row.style.borderBottom = '1px solid var(--border-glass)';
       row.style.transition = 'var(--transition-fast)';
@@ -543,18 +604,18 @@ async function renderSummaryView() {
       });
       
       const profitClass = stats.profit >= 0 ? 'positive' : 'negative';
-      const statusText = stats.totalTrades > 0 ? 'Hoạt động' : 'Chưa giao dịch';
+      const statusText = stats.totalTrades > 0 ? 'Active' : 'Inactive';
       const statusStyle = stats.totalTrades > 0 
         ? 'color: var(--success-text); background: var(--success-glow); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight:600;' 
         : 'color: var(--text-muted); background: rgba(0,0,0,0.03); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;';
         
-      const category = config.type === 'Cá nhân' ? 'Tài khoản cá nhân' : 'Tài khoản quỹ';
+      const category = config.type === 'Personal' ? 'Personal Accounts' : 'Funded Accounts';
       const breadcrumb = `Forex / ${category} / ${config.name}`;
         
       row.innerHTML = `
         <td style="padding: 14px 20px; font-weight:600; color: var(--text-primary); cursor:pointer;" onclick="switchAccount('${accId}', '${breadcrumb}')">
           ${config.name}
-          <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:normal;">Nhấp để xem chi tiết</span>
+          <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:normal;">Click to view details</span>
         </td>
         <td style="padding: 14px 20px; color: var(--text-secondary);">${formatCurrency(config.capital)}</td>
         <td style="padding: 14px 20px; font-weight:600;">${formatCurrency(stats.balance)}</td>
@@ -566,7 +627,6 @@ async function renderSummaryView() {
       tbody.appendChild(row);
     });
     
-    // Update overall top metric widgets
     document.getElementById('sum-initial-capital').innerText = formatCurrency(totalCapital);
     document.getElementById('sum-balance').innerText = formatCurrency(totalBalance);
     
@@ -576,8 +636,8 @@ async function renderSummaryView() {
     
     document.getElementById('sum-total-trades').innerText = totalTrades;
   } catch (err) {
-    console.error("Lỗi đồng bộ dữ liệu tổng hợp:", err);
-    showToast("Không thể đồng bộ dữ liệu tổng hợp!", "error");
+    console.error("Error synchronizing overview summary:", err);
+    showToast("Could not synchronize overview data!", "error");
   }
 }
 
