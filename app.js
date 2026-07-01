@@ -98,7 +98,8 @@ function switchAccount(accountId, breadcrumbText) {
   document.getElementById('current-breadcrumb-path').innerHTML = breadcrumbText;
   
   // Update panels visibility
-  if (accountId === 'ftmo-10k') {
+  const enabledAccounts = ['ftmo-10k', 'ftmo-100k-1', 'the5ers-5k'];
+  if (enabledAccounts.includes(accountId)) {
     document.getElementById('view-forex-account').style.display = 'flex';
     document.getElementById('view-stock').style.display = 'none';
     document.getElementById('view-summary').style.display = 'none';
@@ -110,9 +111,13 @@ function switchAccount(accountId, breadcrumbText) {
     const filterTrigger = document.getElementById('filter-dropdown-trigger');
     if (filterTrigger) filterTrigger.style.display = '';
     
-    // Re-render
-    renderApp();
-    showToast(`Switched to account ${ACCOUNTS_CONFIG[accountId].name}`, 'info');
+    if (accountId === 'the5ers-5k') {
+      showTokenModal();
+    } else {
+      // Re-render FTMO
+      renderApp();
+      showToast(`Switched to account ${ACCOUNTS_CONFIG[accountId].name}`, 'info');
+    }
   } else {
     document.getElementById('view-forex-account').style.display = 'none';
     document.getElementById('view-stock').style.display = 'none';
@@ -175,24 +180,25 @@ function restartComingSoonAnimation() {
 
 // --- Data Render Functions ---
 async function renderApp() {
-  if (activeView !== 'forex-account' || currentAccountId !== 'ftmo-10k') return;
+  const enabledAccounts = ['ftmo-10k', 'ftmo-100k-1', 'the5ers-5k'];
+  if (activeView !== 'forex-account' || !enabledAccounts.includes(currentAccountId)) return;
   
   try {
     let trades = [];
     if (window.location.protocol !== 'file:') {
       try {
-        const res = await fetch(`/api/trades?account=ftmo-10k`);
+        const res = await fetch(`/api/trades?account=${currentAccountId}`);
         if (res.ok) {
           trades = await res.json();
         } else {
-          trades = typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
+          trades = getTradesForAccount(currentAccountId);
         }
       } catch (e) {
         console.warn("Could not fetch trades from server API, falling back to static embedded data:", e);
-        trades = typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
+        trades = getTradesForAccount(currentAccountId);
       }
     } else {
-      trades = typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
+      trades = getTradesForAccount(currentAccountId);
     }
     
     currentAccountTrades = trades;
@@ -1144,6 +1150,12 @@ function getTradesForAccount(accId) {
   if (accId === 'ftmo-10k') {
     return typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
   }
+  if (accId === 'the5ers-5k') {
+    return [
+      { id: 20001, date: '2026-06-03', symbol: 'AUDUSD', direction: 'BUY', amount: 350.0, rr: 3.0, duration: 28800 },
+      { id: 20002, date: '2026-06-05', symbol: 'USDJPY', direction: 'SELL', amount: -100.0, rr: 1.0, duration: 7200 }
+    ];
+  }
   return [];
 }
 
@@ -1261,4 +1273,96 @@ function showToast(message, type = 'success') {
   setTimeout(() => {
     toast.classList.remove('show');
   }, 3500);
+}
+
+// --- The5ers Token Modal Handlers ---
+
+function showTokenModal() {
+  const modal = document.getElementById('token-modal');
+  if (modal) {
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    
+    // Hide input form and loading, show initial question options
+    document.getElementById('token-input-form').style.display = 'none';
+    document.getElementById('token-loading').style.display = 'none';
+    document.getElementById('modal-initial-options').style.display = 'flex';
+    
+    // Autofill token from localStorage if exists
+    const savedToken = localStorage.getItem('the5ers_token');
+    const tokenField = document.getElementById('the5ers-token-field');
+    if (savedToken && tokenField) {
+      tokenField.value = savedToken;
+    }
+  }
+}
+
+function closeTokenModal() {
+  const modal = document.getElementById('token-modal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+}
+
+function handleTokenModalNo() {
+  closeTokenModal();
+  renderApp();
+  showToast(`Loaded cached data for ${ACCOUNTS_CONFIG[currentAccountId].name}`, 'info');
+}
+
+function showTokenInputForm() {
+  document.getElementById('modal-initial-options').style.display = 'none';
+  document.getElementById('token-input-form').style.display = 'block';
+}
+
+function hideTokenInputForm() {
+  document.getElementById('token-input-form').style.display = 'none';
+  document.getElementById('modal-initial-options').style.display = 'flex';
+}
+
+async function handleTokenSubmit(event) {
+  event.preventDefault();
+  
+  const tokenField = document.getElementById('the5ers-token-field');
+  const token = tokenField ? tokenField.value.trim() : '';
+  
+  if (!token) {
+    showToast("Please enter a token!", "error");
+    return;
+  }
+  
+  localStorage.setItem('the5ers_token', token);
+  
+  document.getElementById('token-input-form').style.display = 'none';
+  document.getElementById('token-loading').style.display = 'block';
+  
+  try {
+    const response = await fetch('/api/the5ers/update-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ token: token })
+    });
+    
+    if (response.ok) {
+      const trades = await response.json();
+      currentAccountTrades = trades;
+      
+      closeTokenModal();
+      initDateRangePanel();
+      renderAppFiltered();
+      showToast("Data fetched successfully!", "success");
+    } else {
+      const errData = await response.json();
+      throw new Error(errData.error || "API Error");
+    }
+  } catch (err) {
+    console.error("Crawl error:", err);
+    showToast(`Fetch failed: ${err.message}`, "error");
+    
+    document.getElementById('token-loading').style.display = 'none';
+    document.getElementById('token-input-form').style.display = 'block';
+  }
 }
