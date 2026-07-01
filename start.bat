@@ -1,21 +1,22 @@
 @echo off
 cd /d "%~dp0"
-title Lambda Capital Dashboard Launcher
-echo ==================================================
-echo       LAMBDA CAPITAL DASHBOARD DEVELOPER
-echo ==================================================
-echo.
-echo [+] Dang khoi dong Local Backend Server...
-echo [+] Trinh duyet se tu dong mo: http://localhost:3000
-echo.
-echo (Dong cua so nay de tat ung dung)
-echo ==================================================
+title Lambda Capital Dashboard Server
+echo ===================================================
+echo   Khoi dong Lambda Capital Dashboard Server...
+echo   Server se chay tai dia chi: http://localhost:3000
+echo ===================================================
 echo.
 
-:: Mo trinh duyet den trang local host
-start http://localhost:3000
+:: Open browser automatically
+start "" "http://localhost:3000"
 
-:: Chay file server python
+:: Start the python server
 python server.py
 
-pause
+if %ERRORLEVEL% neq 0 (
+    echo.
+    echo [LOI] Khong the khoi dong python server.py.
+    echo Vui long kiem tra xem Python da duoc cai dat va them vao PATH chua.
+    echo.
+    pause
+)
