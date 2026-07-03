@@ -560,9 +560,9 @@
       <div id="modal-initial-options" style="display: flex; flex-direction: column; gap: 16px;">
         <p style="color: #475569; font-size: 0.9rem; line-height: 1.4; margin: 0; text-align: left;">Would you like to update your API token to fetch the latest trades from The5ers?</p>
         
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button class="btn-premium-no" onclick="handleTokenModalNo()" style="padding: 10px 20px; font-size: 0.82rem;">Use Cached</button>
-          <button class="btn-premium-yes" onclick="showTokenInputForm()" style="padding: 10px 20px; font-size: 0.82rem;">Update Token</button>
+        <div style="display: flex; gap: 14px; justify-content: flex-end; margin-top: 6px;">
+          <button class="btn-premium-no" onclick="handleTokenModalNo()">Use Cached</button>
+          <button class="btn-premium-yes" onclick="showTokenInputForm()">Update Token</button>
         </div>
       </div>
       
@@ -571,9 +571,9 @@
           <label for="the5ers-token-field" style="font-size: 0.8rem; color: #475569; font-weight: 600; text-align: left;">Bearer Token (JWT):</label>
           <textarea id="the5ers-token-field" class="token-textarea" rows="3" placeholder="Paste your token here (starts with eyJ...)"></textarea>
         </div>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button type="button" class="btn-premium-no" onclick="hideTokenInputForm()" style="padding: 10px 20px; font-size: 0.82rem;">Back</button>
-          <button type="submit" class="btn-premium-yes" id="btn-token-submit" style="padding: 10px 20px; font-size: 0.82rem;">Confirm</button>
+        <div style="display: flex; gap: 14px; justify-content: flex-end; margin-top: 6px;">
+          <button type="button" class="btn-premium-no" onclick="hideTokenInputForm()">Back</button>
+          <button type="submit" class="btn-premium-yes" id="btn-token-submit">Confirm</button>
         </div>
       </form>
       
@@ -592,6 +592,6 @@
   </div>
 
   <!-- Main JavaScript App Logic -->
-  <script src="app.js"></script>
+  <script src="app.js?v=20260703_v5"></script>
 </body>
 </html>

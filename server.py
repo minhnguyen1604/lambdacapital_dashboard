@@ -244,7 +244,7 @@ def parse_the5ers_trades(json_data):
             swap_val = 0.0
             fee_val = 0.0
             
-        net_profit = round(profit_val + swap_val + fee_val, 2)
+        net_profit = round(profit_val, 2)
         
         open_price = item.get('entry') or item.get('openPrice') or 0.0
         close_price = item.get('exit') or item.get('closePrice') or 0.0
@@ -410,6 +410,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         # Mute logging to keep stdout cleaner
         pass
 
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         
@@ -528,54 +534,95 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
             # Default account ID from user's Hub request URL
             account_id = '25739927'
-            url = f"https://api.the5ers.com/position/all/{account_id}?page=1&limit=100"
             
-            req = urllib.request.Request(url)
-            req.add_header('Authorization', f"Bearer {token}")
-            req.add_header('x-brand', '5ers')
-            req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
-            req.add_header('Accept', 'application/json')
+            trades = []
+            crawled_ids = set()
+            page = 1
+            max_pages = 100
             
             print(f"Crawl position requests starting for The5ers account {account_id}...")
             
-            with urllib.request.urlopen(req) as response:
-                res_data = response.read().decode('utf-8')
-                json_response = json.loads(res_data)
+            while page <= max_pages:
+                url = f"https://api.the5ers.com/position/all/{account_id}?page={page}&limit=100"
+                print(f"   -> Crawling page {page}...")
                 
-                # Parse
-                trades = parse_the5ers_trades(json_response)
+                req = urllib.request.Request(url)
+                req.add_header('Authorization', f"Bearer {token}")
+                req.add_header('x-brand', '5ers')
+                req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+                req.add_header('Accept', 'application/json')
                 
-                if trades:
-                    # Create data directory if not exists
-                    os.makedirs('data', exist_ok=True)
+                try:
+                    with urllib.request.urlopen(req) as response:
+                        res_data = response.read().decode('utf-8')
+                        json_response = json.loads(res_data)
+                        
+                        page_trades = parse_the5ers_trades(json_response)
+                        if not page_trades:
+                            print(f"      No trades returned on page {page}. Stopping crawl.")
+                            break
+                            
+                        # Add new trades and prevent duplicates
+                        new_trades_count = 0
+                        for t in page_trades:
+                            t_id = t['id']
+                            if t_id not in crawled_ids:
+                                crawled_ids.add(t_id)
+                                trades.append(t)
+                                new_trades_count += 1
+                                
+                        print(f"      Page {page} returned {len(page_trades)} trades ({new_trades_count} new). Total so far: {len(trades)}")
+                        
+                        # If page returned no new trades, we can stop
+                        if new_trades_count == 0:
+                            print("      All trades on this page were already processed. Stopping crawl.")
+                            break
+                except urllib.error.HTTPError as e:
+                    # If we get a 404 or other errors on subsequent pages, stop crawling gracefully
+                    print(f"      HTTP Error on page {page}: {e.code} - {e.reason}. Stopping crawl.")
+                    if page == 1:
+                        # If the very first page failed, raise the error to return to client
+                        raise e
+                    break
+                except Exception as e:
+                    print(f"      Error on page {page}: {e}. Stopping crawl.")
+                    if page == 1:
+                        raise e
+                    break
                     
-                    # 1. Save to data/the5ers_5k.xlsx
-                    save_to_excel_openpyxl(trades, os.path.join('data', 'the5ers_5k.xlsx'))
-                    
-                    # 2. Save to isolated SQLite DB 'the5ers' table 'the5ers_5k'
-                    save_to_the5ers_db(trades)
+                page += 1
                 
-                # Format response for frontend
-                formatted = []
-                for t in trades:
-                    formatted.append({
-                        'id': t['id'],
-                        'date': t['date'],
-                        'symbol': t['symbol'],
-                        'direction': t['direction'],
-                        'amount': t['amount'],
-                        'rr': t['rr'],
-                        'duration': t['duration']
-                    })
-                    
-                response_bytes = json.dumps(formatted).encode('utf-8')
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json; charset=utf-8')
-                self.send_header('Content-Length', len(response_bytes))
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(response_bytes)
-                print(f"Crawl completed successfully: {len(trades)} trades processed.")
+            if trades:
+                # Create data directory if not exists
+                os.makedirs('data', exist_ok=True)
+                
+                # 1. Save to data/the5ers_5k.xlsx
+                save_to_excel_openpyxl(trades, os.path.join('data', 'the5ers_5k.xlsx'))
+                
+                # 2. Save to isolated SQLite DB 'the5ers' table 'the5ers_5k'
+                save_to_the5ers_db(trades)
+            
+            # Format response for frontend
+            formatted = []
+            for t in trades:
+                formatted.append({
+                    'id': t['id'],
+                    'date': t['date'],
+                    'symbol': t['symbol'],
+                    'direction': t['direction'],
+                    'amount': t['amount'],
+                    'rr': t['rr'],
+                    'duration': t['duration']
+                })
+                
+            response_bytes = json.dumps(formatted).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', len(response_bytes))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(response_bytes)
+            print(f"Crawl completed successfully: {len(trades)} trades processed across {page-1} pages.")
                 
         except urllib.error.HTTPError as e:
             print(f"HTTP Error calling The5ers API: {e.code} - {e.reason}")
@@ -593,6 +640,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
 
 def run_server():
+    # Tu dong quet va cap nhat du lieu tu file Excel vao database khi khoi dong
+    try:
+        import init_db
+        init_db.update_database_from_excel_files()
+    except Exception as e:
+        print(f"[LOI] Khong the tu dong cap nhat database tu Excel: {e}")
+
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:

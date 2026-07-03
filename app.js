@@ -16,11 +16,11 @@ const ACCOUNTS_CONFIG = {
 };
 
 // System current date (hardcoded to June 9, 2026 to match the user's screenshot context)
-const SYSTEM_DATE = new Date('2026-06-09');
+const SYSTEM_DATE = new Date();
 
 let currentAccountId = 'ftmo-10k';
 let activeView = 'forex-account'; // 'forex-account', 'stock', 'summary'
-let activeCalendarDate = new Date('2026-06-01'); // Year/Month view state
+let activeCalendarDate = new Date(SYSTEM_DATE.getFullYear(), SYSTEM_DATE.getMonth(), 1); // Year/Month view state
 let chartInstance = null;
 let currentAccountTrades = [];
 let dateRangeStart = null; // null = no start constraint
@@ -953,6 +953,7 @@ function renderCapitalChart(trades) {
                 const profit = t.amount;
                 text += `\nProfit: ${profit >= 0 ? '+' : ''}${formatCurrency(profit)}`;
                 if (t.date) text += `\nDate: ${t.date}`;
+                if (t.duration) text += `\nDuration: ${formatDuration(t.duration)}`;
               }
               return text.split('\n');
             }
@@ -969,6 +970,20 @@ function renderCapitalChart(trades) {
             font: {
               family: 'Inter',
               size: 11
+            },
+            callback: function(value, index, ticks) {
+              const total = ticks.length;
+              if (index === 0 || index === total - 1) {
+                return this.getLabelForValue(value);
+              }
+              const step = Math.ceil(total / 10);
+              if (index < step / 2 || total - 1 - index < step / 2) {
+                return null;
+              }
+              if (index % step === 0) {
+                return this.getLabelForValue(value);
+              }
+              return null;
             }
           }
         },

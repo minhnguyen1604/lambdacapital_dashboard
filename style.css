@@ -1731,12 +1731,15 @@ th {
 
 /* Buttons style */
 .btn-premium-no {
-  padding: 12px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
   border-radius: 50px;
   background: rgba(15, 23, 42, 0.05);
   border: 1px solid rgba(15, 23, 42, 0.08);
   font-family: 'Inter', sans-serif;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #475569;
   cursor: pointer;
@@ -1749,12 +1752,15 @@ th {
 }
 
 .btn-premium-yes {
-  padding: 12px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
   border-radius: 50px;
   background: linear-gradient(135deg, #ff9d42 0%, #ff7a00 100%);
   border: none;
   font-family: 'Inter', sans-serif;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: white;
   cursor: pointer;
