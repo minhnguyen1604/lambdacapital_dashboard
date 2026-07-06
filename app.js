@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.app-container').classList.add('sidebar-collapsed');
   }
   
+  // Initialize stock search bar autocomplete
+  initStockSearch();
+  
   // Render dashboard
   renderApp();
 });
@@ -107,6 +110,12 @@ function switchAccount(accountId, breadcrumbText) {
     // Show top header on workspace view
     document.querySelector('.content-header').style.display = 'flex';
     
+    const breadcrumbContainer = document.getElementById('header-breadcrumbs-container');
+    if (breadcrumbContainer) breadcrumbContainer.style.display = 'flex';
+    
+    const stockSearch = document.getElementById('header-stock-search');
+    if (stockSearch) stockSearch.style.display = 'none';
+    
     const filterTrigger = document.getElementById('filter-dropdown-trigger');
     if (filterTrigger) filterTrigger.style.display = '';
     
@@ -118,6 +127,12 @@ function switchAccount(accountId, breadcrumbText) {
     document.getElementById('view-stock').style.display = 'none';
     document.getElementById('view-summary').style.display = 'none';
     document.getElementById('view-coming-soon').style.display = 'flex';
+    
+    const breadcrumbContainer = document.getElementById('header-breadcrumbs-container');
+    if (breadcrumbContainer) breadcrumbContainer.style.display = 'flex';
+    
+    const stockSearch = document.getElementById('header-stock-search');
+    if (stockSearch) stockSearch.style.display = 'none';
     
     // Hide top header on Coming Soon view
     document.querySelector('.content-header').style.display = 'none';
@@ -153,15 +168,86 @@ function switchMainView(viewType, viewName) {
   document.getElementById('view-forex-account').style.display = 'none';
   document.getElementById('view-stock').style.display = 'none';
   document.getElementById('view-summary').style.display = 'none';
-  document.getElementById('view-coming-soon').style.display = 'flex';
+  document.getElementById('view-coming-soon').style.display = 'none';
   
-  // Hide top header on Coming Soon view
-  document.querySelector('.content-header').style.display = 'none';
+  const stockSearch = document.getElementById('header-stock-search');
+  const filterTrigger = document.getElementById('filter-dropdown-trigger');
+  const breadcrumbContainer = document.getElementById('header-breadcrumbs-container');
   
-  // Restart letter animation
-  restartComingSoonAnimation();
+  if (viewType === 'stock') {
+    document.getElementById('view-stock').style.display = 'flex';
+    document.querySelector('.content-header').style.display = 'flex';
+    if (stockSearch) stockSearch.style.display = 'flex';
+    if (filterTrigger) filterTrigger.style.display = 'none';
+    if (breadcrumbContainer) breadcrumbContainer.style.display = 'none';
+    switchStockSidebarTab('backtest', 'Stocks / Backtest');
+  } else if (viewType === 'summary') {
+    document.getElementById('view-summary').style.display = 'block';
+    document.querySelector('.content-header').style.display = 'flex';
+    if (stockSearch) stockSearch.style.display = 'none';
+    if (filterTrigger) filterTrigger.style.display = '';
+    if (breadcrumbContainer) breadcrumbContainer.style.display = 'flex';
+    renderSummaryView();
+  } else {
+    document.getElementById('view-coming-soon').style.display = 'flex';
+    document.querySelector('.content-header').style.display = 'none';
+    if (stockSearch) stockSearch.style.display = 'none';
+    if (filterTrigger) filterTrigger.style.display = '';
+    if (breadcrumbContainer) breadcrumbContainer.style.display = 'flex';
+    restartComingSoonAnimation();
+  }
   
   document.getElementById('current-breadcrumb-path').innerText = viewName;
+}
+
+// Switch Stock sidebar sub-tabs
+function switchStockSidebarTab(subTabName, breadcrumbText) {
+  activeView = 'stock';
+  
+  // Update sidebar active classes
+  document.querySelectorAll('.nav-nested-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-sub-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  
+  // Set main nav Stocks active and expand sub-menu
+  const navStock = document.getElementById('nav-stock');
+  if (navStock) navStock.classList.add('active');
+  
+  const stockSub = document.getElementById('stock-sub');
+  if (stockSub) stockSub.style.maxHeight = '400px';
+  
+  const backtestSub = document.getElementById('nav-stock-backtest');
+  if (backtestSub) backtestSub.classList.add('active');
+  
+  // Show stock panels
+  document.getElementById('view-forex-account').style.display = 'none';
+  document.getElementById('view-stock').style.display = 'flex';
+  document.getElementById('view-summary').style.display = 'none';
+  document.getElementById('view-coming-soon').style.display = 'none';
+  
+  // Show header and configure elements
+  document.querySelector('.content-header').style.display = 'flex';
+  document.getElementById('current-breadcrumb-path').innerText = breadcrumbText || 'Stocks / Backtest';
+  
+  const stockSearch = document.getElementById('header-stock-search');
+  if (stockSearch) stockSearch.style.display = 'flex';
+  
+  const filterTrigger = document.getElementById('filter-dropdown-trigger');
+  if (filterTrigger) filterTrigger.style.display = 'none';
+  
+  const breadcrumbContainer = document.getElementById('header-breadcrumbs-container');
+  if (breadcrumbContainer) breadcrumbContainer.style.display = 'none';
+  
+  // Auto-run backtest
+  setTimeout(() => {
+    runStockBacktest();
+  }, 50);
 }
 
 // --- Restart Coming Soon Animation ---
@@ -1242,6 +1328,51 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function formatStockCurrency(value) {
+  const currencySelect = document.getElementById('bt-currency');
+  const currency = currencySelect ? currencySelect.value : 'VND';
+  if (currency === 'VND') {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  } else {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  }
+}
+
+window.onStockCurrencyChange = () => {
+  const currencySelect = document.getElementById('bt-currency');
+  if (!currencySelect) return;
+  const currency = currencySelect.value;
+  const balanceInput = document.getElementById('bt-initial-balance');
+  if (balanceInput) {
+    if (currency === 'VND') {
+      balanceInput.value = '100000000';
+      balanceInput.step = '10000000';
+    } else {
+      balanceInput.value = '10000';
+      balanceInput.step = '1000';
+    }
+  }
+  runStockBacktest();
+};
+
+window.resetStockChartZoom = () => {
+  if (stockChartInstance) {
+    stockChartInstance.resetZoom();
+  }
+  const resetBtn = document.getElementById('btn-reset-zoom');
+  if (resetBtn) resetBtn.style.display = 'none';
+};
+
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast-notif');
   const icon = document.getElementById('toast-icon');
@@ -1261,4 +1392,484 @@ function showToast(message, type = 'success') {
   setTimeout(() => {
     toast.classList.remove('show');
   }, 3500);
+}
+
+// === Stock Backtesting & Search Functionality ===
+
+let AVAILABLE_TICKERS = [];
+
+let selectedStockTicker = 'HAH';
+let currentStockChartMode = 'line'; // 'line' or 'candle'
+let stockChartInstance = null;
+let currentStockPriceData = [];
+let currentStockTrades = [];
+
+// Initialize Ticker Autocomplete Search
+function initStockSearch() {
+  const suggestionsContainer = document.getElementById('stock-search-suggestions');
+  if (!suggestionsContainer) return;
+  
+  // Fetch tickers from backend API
+  fetch('/api/stock/tickers')
+    .then(res => res.json())
+    .then(data => {
+      AVAILABLE_TICKERS = data;
+    })
+    .catch(err => {
+      console.error("Failed to load tickers:", err);
+      AVAILABLE_TICKERS = [
+        { symbol: 'HAH', fullname: 'HAH.VN', sector: 'Vận tải', industry: 'Hàng hải' },
+        { symbol: 'SSI', fullname: 'SSI.VN', sector: 'Tài chính', industry: 'Chứng khoán' },
+        { symbol: 'HPG', fullname: 'HPG.VN', sector: 'Công nghiệp', industry: 'Thép' },
+        { symbol: 'FPT', fullname: 'FPT.VN', sector: 'Công nghệ', industry: 'Phần mềm' }
+      ];
+    });
+  
+  window.showStockSearchSuggestions = () => {
+    suggestionsContainer.style.display = 'block';
+    renderStockSuggestions(document.getElementById('stock-search-input').value);
+  };
+  
+  window.hideStockSearchSuggestions = () => {
+    setTimeout(() => {
+      suggestionsContainer.style.display = 'none';
+    }, 250);
+  };
+  
+  window.handleStockSearchKeyup = (e) => {
+    const query = e.target.value.trim().toUpperCase();
+    renderStockSuggestions(query);
+  };
+  
+  window.selectStockSearchTicker = (symbol) => {
+    selectedStockTicker = symbol;
+    document.getElementById('stock-search-input').value = symbol;
+    const titleEl = document.getElementById('stock-chart-title');
+    if (titleEl) titleEl.innerText = `Price Action & Signals`;
+    showToast(`Selected stock ${symbol}.VN`, 'success');
+    runStockBacktest(); // Auto-run backtest on stock selection
+  };
+}
+
+function renderStockSuggestions(query) {
+  const suggestionsContainer = document.getElementById('stock-search-suggestions');
+  if (!suggestionsContainer) return;
+  
+  const queryUpper = (query || '').trim().toUpperCase();
+  const filtered = AVAILABLE_TICKERS.filter(item => 
+    item.symbol.includes(queryUpper) || 
+    (item.sector && item.sector.toUpperCase().includes(queryUpper)) ||
+    (item.industry && item.industry.toUpperCase().includes(queryUpper))
+  );
+  
+  if (filtered.length === 0) {
+    suggestionsContainer.innerHTML = '<div style="padding: 10px 16px; color: var(--text-muted); font-size: 0.85rem;">No tickers found</div>';
+    return;
+  }
+  
+  suggestionsContainer.innerHTML = filtered.slice(0, 100).map(item => `
+    <div onmousedown="selectStockSearchTicker('${item.symbol}')" style="padding: 10px 16px; cursor: pointer; display: flex; flex-direction: column; border-bottom: 1px solid var(--border-glass);" onmouseover="this.style.background='rgba(0,0,0,0.02)'" onmouseout="this.style.background='transparent'">
+      <span style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${item.fullname}</span>
+      <span style="font-size: 0.72rem; color: var(--text-muted);">${item.sector} (${item.industry})</span>
+    </div>
+  `).join('');
+}
+
+// Chart Mode toggle: line vs candle
+function setStockChartMode(mode) {
+  currentStockChartMode = mode;
+  
+  const btnLine = document.getElementById('btn-chart-mode-line');
+  const btnCandle = document.getElementById('btn-chart-mode-candle');
+  
+  if (mode === 'line') {
+    btnLine.classList.add('active');
+    btnCandle.classList.remove('active');
+  } else {
+    btnLine.classList.remove('active');
+    btnCandle.classList.add('active');
+  }
+  
+  renderStockChart();
+}
+
+function runStockBacktest() {
+  const initialBalance = parseFloat(document.getElementById('bt-initial-balance').value) || 100000000;
+  const commission = parseFloat(document.getElementById('bt-commission').value) || 0.15;
+  const timeframe = document.getElementById('bt-timeframe').value;
+  const startDate = document.getElementById('bt-start-date').value;
+  const endDate = document.getElementById('bt-end-date').value;
+  
+  const ticker = selectedStockTicker;
+  
+  // Show loading state
+  showToast(`Running backtest for ${ticker}...`, 'info');
+  
+  // Determine if currency is VND
+  const currency = document.getElementById('bt-currency')?.value || 'VND';
+  
+  // If currency is VND, database prices are divided by 1000, so we scale down the initial cash by 1000 for backtesting.
+  const backendInitialBalance = currency === 'VND' ? initialBalance / 1000 : initialBalance;
+  
+  // Fetch from backend API
+  const url = `/api/stock/backtest?ticker=${encodeURIComponent(ticker)}&timeframe=${timeframe}&start=${startDate}&end=${endDate}&initial_balance=${backendInitialBalance}&commission=${commission}`;
+  
+  fetch(url)
+    .then(res => {
+      if (!res.ok) {
+        return res.json().then(err => { throw new Error(err.error || 'Server error') });
+      }
+      return res.json();
+    })
+    .then(data => {
+      let prices = data.prices;
+      let trades = data.trades;
+      let metrics = { ...data.metrics };
+      
+      if (currency === 'VND') {
+        prices = prices.map(d => ({
+          ...d,
+          o: d.o * 1000,
+          h: d.h * 1000,
+          l: d.l * 1000,
+          c: d.c * 1000
+        }));
+        
+        trades = trades.map(t => ({
+          ...t,
+          entry_price: t.entry_price * 1000,
+          exit_price: t.exit_price * 1000,
+          pnl: t.pnl * 1000
+        }));
+        
+        metrics.Equity_Final = (metrics.Equity_Final || 0) * 1000;
+        metrics.Equity_Peak = (metrics.Equity_Peak || 0) * 1000;
+      }
+      
+      currentStockPriceData = prices;
+      currentStockTrades = trades;
+      
+      renderStockChart();
+      updateBacktestMetrics(metrics, initialBalance);
+      updateBacktestTradeLog();
+      
+      showToast(`Backtest completed for ${ticker}.VN`, 'success');
+    })
+    .catch(err => {
+      console.error(err);
+      showToast(err.message || "Failed to run backtest", "error");
+    });
+}
+
+function renderStockChart() {
+  const canvasEl = document.getElementById('stockBacktestChart');
+  if (!canvasEl) return;
+  const ctx = canvasEl.getContext('2d');
+  
+  // Hide reset zoom button on redraw
+  const resetBtn = document.getElementById('btn-reset-zoom');
+  if (resetBtn) resetBtn.style.display = 'none';
+  
+  // Double-click to reset zoom
+  canvasEl.ondblclick = () => {
+    resetStockChartZoom();
+  };
+  
+  if (stockChartInstance) {
+    stockChartInstance.destroy();
+  }
+  
+  const dates = currentStockPriceData.map(d => d.date);
+  const closePrices = currentStockPriceData.map(d => d.c);
+  
+  const candlestickPlugin = {
+    id: 'candlestick',
+    beforeDatasetsDraw(chart) {
+      const {ctx, scales: {x, y}} = chart;
+      const mode = chart.config.options.chartMode;
+      if (mode !== 'candle') return;
+
+      ctx.save();
+      const meta = chart.getDatasetMeta(0);
+      
+      currentStockPriceData.forEach((point, i) => {
+        const model = meta.data[i];
+        if (!model) return;
+        const xPos = model.x;
+        const yOpen = y.getPixelForValue(point.o);
+        const yClose = y.getPixelForValue(point.c);
+        const yHigh = y.getPixelForValue(point.h);
+        const yLow = y.getPixelForValue(point.l);
+
+        const isGreen = point.c >= point.o;
+        ctx.strokeStyle = isGreen ? '#059669' : '#e11d48';
+        ctx.fillStyle = isGreen ? '#059669' : '#e11d48';
+        ctx.lineWidth = 1.5;
+
+        // Wick
+        ctx.beginPath();
+        ctx.moveTo(xPos, yHigh);
+        ctx.lineTo(xPos, yLow);
+        ctx.stroke();
+
+        // Body
+        const bodyWidth = currentStockPriceData.length > 80 ? 4 : 8;
+        const top = Math.min(yOpen, yClose);
+        const bottom = Math.max(yOpen, yClose);
+        const height = Math.max(1.5, bottom - top);
+        ctx.fillRect(xPos - bodyWidth / 2, top, bodyWidth, height);
+      });
+      ctx.restore();
+    }
+  };
+
+  const signalMarkersPlugin = {
+    id: 'signalMarkers',
+    afterDatasetsDraw(chart) {
+      const {ctx, scales: {x, y}} = chart;
+      const trades = chart.config.options.trades || [];
+      
+      ctx.save();
+      trades.forEach(trade => {
+        const idx = currentStockPriceData.findIndex(pt => pt.date === trade.date);
+        if (idx === -1) return;
+        
+        const meta = chart.getDatasetMeta(0);
+        const model = meta.data[idx];
+        if (!model) return;
+        
+        const xPos = model.x;
+        const yPos = y.getPixelForValue(trade.price);
+        
+        if (trade.type === 'BUY') {
+          // Green triangle pointing up, tip exactly touching (xPos, yPos)
+          ctx.fillStyle = '#059669';
+          ctx.beginPath();
+          ctx.moveTo(xPos, yPos);
+          ctx.lineTo(xPos - 6, yPos + 12);
+          ctx.lineTo(xPos + 6, yPos + 12);
+          ctx.closePath();
+          ctx.fill();
+          
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 8px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('B', xPos, yPos + 8);
+        } else {
+          // Red triangle pointing down, tip exactly touching (xPos, yPos)
+          ctx.fillStyle = '#e11d48';
+          ctx.beginPath();
+          ctx.moveTo(xPos, yPos);
+          ctx.lineTo(xPos - 6, yPos - 12);
+          ctx.lineTo(xPos + 6, yPos - 12);
+          ctx.closePath();
+          ctx.fill();
+          
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 8px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('S', xPos, yPos - 8);
+        }
+      });
+      ctx.restore();
+    }
+  };
+
+  const datasets = [
+    {
+      label: 'Price',
+      data: closePrices,
+      borderColor: currentStockChartMode === 'candle' ? 'transparent' : '#3b82f6',
+      backgroundColor: currentStockChartMode === 'candle' ? 'transparent' : 'rgba(59, 130, 246, 0.03)',
+      borderWidth: 2,
+      fill: currentStockChartMode === 'line',
+      tension: 0.1,
+      pointRadius: 0,
+      pointHoverRadius: 4
+    }
+  ];
+
+  // Map trades to buy/sell chart markers
+  const chartMarkers = [];
+  currentStockTrades.forEach(trade => {
+    chartMarkers.push({
+      type: 'BUY',
+      date: trade.entry_time,
+      price: trade.entry_price
+    });
+    chartMarkers.push({
+      type: 'SELL',
+      date: trade.exit_time,
+      price: trade.exit_price
+    });
+  });
+
+  stockChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: datasets
+    },
+    plugins: [candlestickPlugin, signalMarkersPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      chartMode: currentStockChartMode,
+      trades: chartMarkers,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const idx = context.dataIndex;
+              const pt = currentStockPriceData[idx];
+              if (!pt) return '';
+              return [
+                `Close: ${formatStockCurrency(pt.c)}`,
+                `Open: ${formatStockCurrency(pt.o)}`,
+                `High: ${formatStockCurrency(pt.h)}`,
+                `Low: ${formatStockCurrency(pt.l)}`
+              ];
+            }
+          }
+        },
+        zoom: {
+          zoom: {
+            wheel: {
+              enabled: true,
+            },
+            pinch: {
+              enabled: true
+            },
+            mode: 'x',
+            onZoom: () => {
+              const rBtn = document.getElementById('btn-reset-zoom');
+              if (rBtn) rBtn.style.display = 'inline-flex';
+            }
+          },
+          pan: {
+            enabled: true,
+            mode: 'x',
+            onPan: () => {
+              const rBtn = document.getElementById('btn-reset-zoom');
+              if (rBtn) rBtn.style.display = 'inline-flex';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false }
+        },
+        y: {
+          grid: { color: 'rgba(0,0,0,0.02)' }
+        }
+      }
+    }
+  });
+}
+
+function updateBacktestMetrics(metrics, initialBalance) {
+  const tbody = document.getElementById('bt-metrics-table-body');
+  if (!tbody) return;
+  
+  if (!metrics) {
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-muted); padding: 80px 0;">No metrics available. Run backtest to load.</td></tr>';
+    return;
+  }
+
+  const netProfit = (metrics.Equity_Final || 0) - initialBalance;
+  const netProfitPct = initialBalance > 0 ? (netProfit / initialBalance) * 100 : 0;
+  
+  const formatPct = (val) => {
+    if (val === null || val === undefined) return 'N/A';
+    return `${val >= 0 ? '+' : ''}${val.toFixed(2)}%`;
+  };
+  
+  const formatVal = (val) => {
+    if (val === null || val === undefined) return 'N/A';
+    return val.toFixed(2);
+  };
+
+  const formatDays = (val) => {
+    if (val === null || val === undefined) return 'N/A';
+    return `${val} ngày`;
+  };
+
+  const rows = [
+    { label: 'Ngày bắt đầu (Start Date)', value: metrics.Start_Date || 'N/A' },
+    { label: 'Ngày kết thúc (End Date)', value: metrics.End_Date || 'N/A' },
+    { label: 'Thời gian backtest (Duration)', value: formatDays(metrics.Duration_Days) },
+    { label: 'Vốn ban đầu (Initial Balance)', value: formatStockCurrency(initialBalance) },
+    { label: 'Vốn cuối kỳ (Ending Balance)', value: formatStockCurrency(metrics.Equity_Final) },
+    { 
+      label: 'Lợi nhuận ròng (Net Profit)', 
+      value: `<span class="${netProfit >= 0 ? 'positive' : 'negative'}" style="font-weight: 700;">${netProfit >= 0 ? '+' : ''}${formatStockCurrency(netProfit)} (${formatPct(netProfitPct)})</span>` 
+    },
+    { label: 'Lợi nhuận Mua & Giữ (Buy & Hold Return)', value: formatPct(metrics.Buy_Hold_Return_Pct) },
+    { label: 'Lợi nhuận năm (Annualized Return)', value: formatPct(metrics.Return_Ann_Pct) },
+    { label: 'Độ biến động năm (Annualized Volatility)', value: formatPct(metrics.Volatility_Ann_Pct) },
+    { label: 'Hệ số Sharpe (Sharpe Ratio)', value: formatVal(metrics.Sharpe_Ratio) },
+    { label: 'Hệ số Sortino (Sortino Ratio)', value: formatVal(metrics.Sortino_Ratio) },
+    { label: 'Hệ số Calmar (Calmar Ratio)', value: formatVal(metrics.Calmar_Ratio) },
+    { 
+      label: 'Mức sụt giảm lớn nhất (Max Drawdown)', 
+      value: `<span class="negative" style="font-weight: 600;">${metrics.Max_Drawdown_Pct ? metrics.Max_Drawdown_Pct.toFixed(2) : '0.00'}%</span>` 
+    },
+    { label: 'Thời gian sụt giảm lớn nhất (Max DD Duration)', value: formatDays(metrics.Max_Drawdown_Duration_Days) },
+    { label: 'Tổng số lệnh (Total Trades)', value: metrics.Num_Trades !== undefined ? metrics.Num_Trades : 0 },
+    { 
+      label: 'Tỷ lệ thắng (Win Rate)', 
+      value: `<span style="font-weight: 600;">${metrics.Win_Rate_Pct ? metrics.Win_Rate_Pct.toFixed(1) : '0.0'}%</span>` 
+    },
+    { label: 'Hệ số lợi nhuận (Profit Factor)', value: formatVal(metrics.Profit_Factor) },
+    { label: 'Kỳ vọng mỗi lệnh (Expectancy)', value: formatPct(metrics.Expectancy_Pct) },
+    { label: 'Lợi nhuận TB lệnh (Avg. Trade Return)', value: formatPct(metrics.Avg_Trade_Pct) },
+    { label: 'Lệnh thắng tốt nhất (Best Trade)', value: formatPct(metrics.Best_Trade_Pct) },
+    { label: 'Lệnh thua tệ nhất (Worst Trade)', value: formatPct(metrics.Worst_Trade_Pct) },
+    { label: 'Thời gian nắm giữ TB (Avg. Trade Duration)', value: formatDays(metrics.Avg_Trade_Duration_Days) }
+  ];
+
+  tbody.innerHTML = rows.map(row => `
+    <tr style="border-bottom: 1px solid var(--border-glass);">
+      <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 0.88rem;">${row.label}</td>
+      <td style="padding: 10px 14px; text-align: right; font-weight: 600; font-size: 0.88rem; color: var(--text-primary);">${row.value}</td>
+    </tr>
+  `).join('');
+}
+
+function updateBacktestTradeLog() {
+  const tbody = document.getElementById('bt-trade-log-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (currentStockTrades.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 80px 0;">No completed trades during this period.</td></tr>';
+    return;
+  }
+  
+  const sorted = [...currentStockTrades].reverse();
+  
+  sorted.forEach((trade) => {
+    const row = document.createElement('tr');
+    row.style.borderBottom = '1px solid var(--border-glass)';
+    
+    const pnlClass = trade.pnl >= 0 ? 'positive' : 'negative';
+    const returnClass = trade.return_pct >= 0 ? 'kpi-badge positive' : 'kpi-badge negative';
+    
+    row.innerHTML = `
+      <td style="padding: 10px 10px; color: var(--text-secondary); font-size: 0.85rem;">${trade.entry_time}</td>
+      <td style="padding: 10px 10px; color: var(--text-secondary); font-size: 0.85rem;">${trade.exit_time}</td>
+      <td style="padding: 10px 10px; text-align: right; color: var(--text-secondary); font-size: 0.85rem;">${formatStockCurrency(trade.entry_price)}</td>
+      <td style="padding: 10px 10px; text-align: right; color: var(--text-secondary); font-size: 0.85rem;">${formatStockCurrency(trade.exit_price)}</td>
+      <td style="padding: 10px 10px; text-align: right; font-weight: 600; font-size: 0.85rem;" class="kpi-value ${pnlClass}">${trade.pnl >= 0 ? '+' : ''}${formatStockCurrency(trade.pnl)}</td>
+      <td style="padding: 10px 10px; text-align: right; font-size: 0.85rem;"><span class="${returnClass}">${trade.return_pct >= 0 ? '+' : ''}${trade.return_pct.toFixed(2)}%</span></td>
+    `;
+    
+    tbody.appendChild(row);
+  });
 }

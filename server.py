@@ -175,6 +175,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         if parsed_url.path == '/api/trades':
             self.handle_api_trades(parsed_url)
             return
+        elif parsed_url.path == '/api/stock/tickers':
+            self.handle_api_stock_tickers(parsed_url)
+            return
+        elif parsed_url.path == '/api/stock/backtest':
+            self.handle_api_stock_backtest(parsed_url)
+            return
             
         # Default behavior: Serve static files
         super().do_GET()
@@ -248,6 +254,209 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(response_data)
+
+    def handle_api_stock_tickers(self, parsed_url):
+        db_path = 'd:/quant_trading/data_prices.db'
+        tickers = []
+        try:
+            if os.path.exists(db_path):
+                conn = sqlite3.connect(db_path)
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT Ticker, Sector, Industry 
+                    FROM daily_prices 
+                    GROUP BY Ticker 
+                    ORDER BY Ticker ASC
+                """)
+                rows = cursor.fetchall()
+                for row in rows:
+                    ticker_name = row[0]
+                    symbol = ticker_name.replace('.VN', '') if ticker_name else ''
+                    tickers.append({
+                        'symbol': symbol,
+                        'fullname': ticker_name,
+                        'sector': row[1] or 'Unknown',
+                        'industry': row[2] or 'Unknown'
+                    })
+                conn.close()
+        except Exception as e:
+            print(f"Error querying tickers database: {e}")
+            self.send_error(500, f"Database error: {e}")
+            return
+
+        response_data = json.dumps(tickers).encode('utf-8')
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', len(response_data))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(response_data)
+
+    def handle_api_stock_backtest(self, parsed_url):
+        query_params = urllib.parse.parse_qs(parsed_url.query)
+        ticker = query_params.get('ticker', ['HAH'])[0].strip().upper()
+        timeframe = query_params.get('timeframe', ['D'])[0].strip().upper()
+        start_date = query_params.get('start', ['2024-01-01'])[0].strip()
+        end_date = query_params.get('end', ['2026-06-09'])[0].strip()
+        initial_balance = float(query_params.get('initial_balance', [100000000.0])[0])
+        commission = float(query_params.get('commission', [0.1])[0])
+
+        commission_mult = commission / 100.0
+
+        try:
+            import pandas as pd
+            import numpy as np
+            from backtesting import Backtest, Strategy
+            from backtesting.lib import crossover
+
+            def calculate_ema(values, period):
+                return pd.Series(values).ewm(span=period, adjust=False).mean().values
+
+            def calculate_wma(values, period):
+                values_series = pd.Series(values)
+                weights = np.arange(1, period + 1)
+                return values_series.rolling(period).apply(lambda p: np.dot(p, weights) / weights.sum(), raw=True).values
+
+            class EmaWmaCrossover(Strategy):
+                ema_period = 9
+                wma_period = 45
+
+                def init(self):
+                    self.ema = self.I(calculate_ema, self.data.Close, self.ema_period)
+                    self.wma = self.I(calculate_wma, self.data.Close, self.wma_period)
+
+                def next(self):
+                    if crossover(self.ema, self.wma):
+                        self.buy()
+                    elif crossover(self.wma, self.ema):
+                        self.position.close()
+
+            db_path = 'd:/quant_trading/data_prices.db'
+            table_name = 'daily_prices' if timeframe == 'D' else 'weekly_prices'
+            
+            ticker_query = ticker if ticker.endswith('.VN') else f"{ticker}.VN"
+            
+            if not os.path.exists(db_path):
+                self.send_error(404, "Prices database not found")
+                return
+
+            conn = sqlite3.connect(db_path)
+            df = pd.read_sql_query(
+                f"SELECT Date, Open, High, Low, Close, Volume FROM {table_name} "
+                f"WHERE Ticker = ? AND Date >= ? AND Date <= ? ORDER BY Date ASC",
+                conn, params=(ticker_query, start_date, end_date)
+            )
+            conn.close()
+
+            if df.empty or len(df) < 45:
+                response_data = json.dumps({'error': 'No data found or insufficient data (need >= 45 periods)'}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', len(response_data))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(response_data)
+                return
+
+            prices_list = []
+            for _, row in df.iterrows():
+                prices_list.append({
+                    'date': row['Date'],
+                    'o': float(row['Open']),
+                    'h': float(row['High']),
+                    'l': float(row['Low']),
+                    'c': float(row['Close']),
+                    'v': float(row['Volume'])
+                })
+
+            df['Date'] = pd.to_datetime(df['Date'])
+            df.set_index('Date', inplace=True)
+            df.sort_index(inplace=True)
+            
+            df = df[['Open', 'High', 'Low', 'Close', 'Volume']]
+            for col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            df.dropna(inplace=True)
+
+            if len(df) < 45:
+                response_data = json.dumps({'error': 'Insufficient valid data rows after clean'}).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', len(response_data))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(response_data)
+                return
+
+            bt = Backtest(df, EmaWmaCrossover, cash=initial_balance, commission=commission_mult)
+            stats = bt.run()
+
+            def clean_val(val):
+                if pd.isna(val) or val == np.inf or val == -np.inf:
+                    return None
+                if hasattr(val, 'item'):
+                    return val.item()
+                return val
+
+            metrics = {
+                'Start_Date': stats['Start'].strftime('%Y-%m-%d') if pd.notna(stats['Start']) else None,
+                'End_Date': stats['End'].strftime('%Y-%m-%d') if pd.notna(stats['End']) else None,
+                'Duration_Days': clean_val(stats['Duration'].days) if pd.notna(stats['Duration']) else None,
+                'Exposure_Time_Pct': clean_val(stats['Exposure Time [%]']),
+                'Equity_Final': clean_val(stats['Equity Final [$]']),
+                'Equity_Peak': clean_val(stats['Equity Peak [$]']),
+                'Return_Pct': clean_val(stats['Return [%]']),
+                'Buy_Hold_Return_Pct': clean_val(stats['Buy & Hold Return [%]']),
+                'Return_Ann_Pct': clean_val(stats['Return (Ann.) [%]']),
+                'Volatility_Ann_Pct': clean_val(stats['Volatility (Ann.) [%]']),
+                'Sharpe_Ratio': clean_val(stats['Sharpe Ratio']),
+                'Sortino_Ratio': clean_val(stats['Sortino Ratio']),
+                'Calmar_Ratio': clean_val(stats['Calmar Ratio']),
+                'Max_Drawdown_Pct': clean_val(stats['Max. Drawdown [%]']),
+                'Avg_Drawdown_Pct': clean_val(stats['Avg. Drawdown [%]']),
+                'Max_Drawdown_Duration_Days': clean_val(stats['Max. Drawdown Duration'].days) if pd.notna(stats['Max. Drawdown Duration']) else None,
+                'Avg_Drawdown_Duration_Days': clean_val(stats['Avg. Drawdown Duration'].days) if pd.notna(stats['Avg. Drawdown Duration']) else None,
+                'Num_Trades': int(stats['# Trades']) if pd.notna(stats['# Trades']) else 0,
+                'Win_Rate_Pct': clean_val(stats['Win Rate [%]']),
+                'Best_Trade_Pct': clean_val(stats['Best Trade [%]']),
+                'Worst_Trade_Pct': clean_val(stats['Worst Trade [%]']),
+                'Avg_Trade_Pct': clean_val(stats['Avg. Trade [%]']),
+                'Max_Trade_Duration_Days': clean_val(stats['Max. Trade Duration'].days) if pd.notna(stats['Max. Trade Duration']) else None,
+                'Avg_Trade_Duration_Days': clean_val(stats['Avg. Trade Duration'].days) if pd.notna(stats['Avg. Trade Duration']) else None,
+                'Profit_Factor': clean_val(stats['Profit Factor']),
+                'Expectancy_Pct': clean_val(stats['Expectancy [%]']),
+                'SQN': clean_val(stats['SQN'])
+            }
+
+            trades_list = []
+            trades_df = stats['_trades']
+            for _, row in trades_df.iterrows():
+                trades_list.append({
+                    'entry_time': row['EntryTime'].strftime('%Y-%m-%d'),
+                    'exit_time': row['ExitTime'].strftime('%Y-%m-%d'),
+                    'entry_price': clean_val(row['EntryPrice']),
+                    'exit_price': clean_val(row['ExitPrice']),
+                    'pnl': clean_val(row['PnL']),
+                    'return_pct': clean_val(row['ReturnPct'] * 100)
+                })
+
+            result_json = {
+                'prices': prices_list,
+                'metrics': metrics,
+                'trades': trades_list
+            }
+
+            response_data = json.dumps(result_json).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', len(response_data))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(response_data)
+
+        except Exception as e:
+            print(f"Error executing backtest: {e}")
+            self.send_error(500, f"Backtest execution error: {e}")
 
 def run_server():
     # Make sure we serve from the project root directory
