@@ -12,8 +12,10 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
-DB_PATH = 'FTMO'
-EXCEL_PATH = os.path.join('data', 'FTMO_10k.xlsx')
+DB_FTMO = 'FTMO'
+DB_THE5ERS = 'the5ers'
+EXCEL_10K = os.path.join('data', 'FTMO_10k.xlsx')
+EXCEL_100K = os.path.join('data', 'FTMO_100k_1.xlsx')
 
 def parse_excel_pure_python(excel_path):
     trades = []
@@ -103,7 +105,6 @@ def parse_excel_pure_python(excel_path):
                 pips = get_val('Píp')
                 duration = get_val('Thời lượng giao dịch tính bằng giây')
                 
-                # Format variables to correct types
                 volume_val = float(volume) if volume is not None else 0.0
                 open_price_val = float(open_price) if open_price is not None else 0.0
                 close_price_val = float(close_price) if close_price is not None else 0.0
@@ -150,15 +151,15 @@ def parse_excel_pure_python(excel_path):
     return trades
 
 def init_database():
-    print("Khởi tạo cơ sở dữ liệu SQLite...")
-    conn = sqlite3.connect(DB_PATH)
+    # ----------------------------------------------------
+    # 1. Initialize FTMO Database
+    # ----------------------------------------------------
+    print("Khởi tạo cơ sở dữ liệu SQLite: FTMO...")
+    conn = sqlite3.connect(DB_FTMO)
     cursor = conn.cursor()
     
-    # Drop table if exists to start fresh
+    # Recreate table FTMO_10k
     cursor.execute("DROP TABLE IF EXISTS FTMO_10k")
-    cursor.execute("DROP TABLE IF EXISTS trades")
-    
-    # Create FTMO_10k table
     cursor.execute("""
         CREATE TABLE FTMO_10k (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -183,60 +184,408 @@ def init_database():
         )
     """)
     
-    # 1. Parse and insert FTMO_10k Excel data
-    print(f"Đọc dữ liệu từ file Excel: {EXCEL_PATH}")
-    trades_data = parse_excel_pure_python(EXCEL_PATH)
+    # Recreate table FTMO_100k_1
+    cursor.execute("DROP TABLE IF EXISTS FTMO_100k_1")
+    cursor.execute("""
+        CREATE TABLE FTMO_100k_1 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL,
+            trade_id INTEGER,
+            open_time TEXT,
+            close_time TEXT,
+            type TEXT,
+            volume REAL,
+            symbol TEXT,
+            open_price REAL,
+            close_price REAL,
+            sl REAL,
+            tp REAL,
+            swap REAL,
+            commission REAL,
+            profit REAL,
+            net_profit REAL,
+            pips REAL,
+            rr REAL,
+            duration INTEGER
+        )
+    """)
     
-    trades_to_insert = []
-    for t in trades_data:
-        trades_to_insert.append((
+    # Load and insert FTMO_10k Excel data
+    print(f"Đọc dữ liệu từ file Excel: {EXCEL_10K}")
+    trades_10k = parse_excel_pure_python(EXCEL_10K)
+    insert_10k = []
+    for t in trades_10k:
+        insert_10k.append((
             'ftmo-10k', t['trade_id'], t['open_time'], t['close_time'], t['type'],
             t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
             t['swap'], t['commission'], t['profit'], t['net_profit'], t['pips'], t['rr'], t['duration']
         ))
-        
-    if trades_to_insert:
+    if insert_10k:
         cursor.executemany("""
             INSERT INTO FTMO_10k (
                 account_id, trade_id, open_time, close_time, type,
                 volume, symbol, open_price, close_price, sl, tp,
                 swap, commission, profit, net_profit, pips, rr, duration
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, trades_to_insert)
-        print(f"Đã nạp {len(trades_to_insert)} giao dịch của FTMO 10k vào SQLite.")
+        """, insert_10k)
+        print(f"Đã nạp {len(insert_10k)} giao dịch của FTMO 10k vào SQLite.")
         
-    # 2. Seed mock data for other accounts so dashboard is populated
-    print("Nạp dữ liệu mẫu cho các tài khoản còn lại...")
-    seed_data = [
-        # ftmo-100k-1
-        ('ftmo-100k-1', 10001, '2026-06-02 10:00:00', '2026-06-02 15:00:00', 'BUY', 1.0, 'GBPUSD', 1.2500, 1.2620, 1.2420, 1.2650, 0.0, -10.00, 1210.00, 1200.00, 120.0, 1.5, 18000),
-        ('ftmo-100k-1', 10002, '2026-06-04 09:00:00', '2026-06-04 18:00:00', 'SELL', 1.0, 'XAUUSD', 2300.0, 2305.0, 2295.0, 2280.0, 0.0, -10.00, -490.00, -500.00, -50.0, 1.0, 32400),
-        ('ftmo-100k-1', 10003, '2026-06-08 14:00:00', '2026-06-08 20:00:00', 'BUY', 1.5, 'EURUSD', 1.0800, 1.0853, 1.0760, 1.0900, 0.0, -15.00, 815.00, 800.00, 53.0, 2.0, 21600),
+    # Load and insert FTMO_100k_1 Excel data
+    print(f"Đọc dữ liệu từ file Excel: {EXCEL_100K}")
+    trades_100k = parse_excel_pure_python(EXCEL_100K)
+    insert_100k = []
+    for t in trades_100k:
+        insert_100k.append((
+            'ftmo-100k-1', t['trade_id'], t['open_time'], t['close_time'], t['type'],
+            t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
+            t['swap'], t['commission'], t['profit'], t['net_profit'], t['pips'], t['rr'], t['duration']
+        ))
+    if insert_100k:
+        cursor.executemany("""
+            INSERT INTO FTMO_100k_1 (
+                account_id, trade_id, open_time, close_time, type,
+                volume, symbol, open_price, close_price, sl, tp,
+                swap, commission, profit, net_profit, pips, rr, duration
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, insert_100k)
+        print(f"Đã nạp {len(insert_100k)} giao dịch của FTMO 100k #1 vào SQLite.")
         
-        # the5ers-5k
-        ('the5ers-5k', 20001, '2026-06-03 08:00:00', '2026-06-03 16:00:00', 'BUY', 0.1, 'AUDUSD', 0.6500, 0.6535, 0.6480, 0.6560, 0.0, -1.00, 351.00, 350.00, 35.0, 3.0, 28800),
-        ('the5ers-5k', 20002, '2026-06-05 11:00:00', '2026-06-05 13:00:00', 'SELL', 0.2, 'USDJPY', 155.00, 155.50, 154.50, 153.50, 0.0, -2.00, -98.00, -100.00, -50.0, 1.0, 7200),
-        
+    # Seed mock data for personal accounts so dashboard is populated if checked
+    print("Nạp dữ liệu mẫu cho các tài khoản FTMO còn lại...")
+    seed_ftmo = [
         # personal-1
         ('personal-1', 30001, '2026-06-02 08:30:00', '2026-06-02 12:00:00', 'BUY', 0.1, 'EURUSD', 1.0820, 1.0835, 1.0810, 1.0850, 0.0, -1.00, 151.00, 150.00, 15.0, 1.5, 12600),
         ('personal-1', 30002, '2026-06-04 13:15:00', '2026-06-04 17:30:00', 'SELL', 0.15, 'XAUUSD', 2310.0, 2305.0, 2312.5, 2300.0, 0.0, -1.50, 81.50, 80.00, 50.0, 2.0, 15300),
-        
         # personal-2
         ('personal-2', 40001, '2026-06-03 14:00:00', '2026-06-03 22:00:00', 'SELL', 0.2, 'GBPUSD', 1.2650, 1.2660, 1.2640, 1.2610, 0.0, -2.00, -198.00, -200.00, -10.0, 1.0, 28800),
         ('personal-2', 40002, '2026-06-06 09:30:00', '2026-06-06 15:45:00', 'BUY', 0.3, 'EURUSD', 1.0850, 1.0865, 1.0835, 1.0895, 0.0, -3.00, 453.00, 450.00, 15.0, 2.2, 22500)
     ]
-    
     cursor.executemany("""
         INSERT INTO FTMO_10k (
             account_id, trade_id, open_time, close_time, type,
             volume, symbol, open_price, close_price, sl, tp,
             swap, commission, profit, net_profit, pips, rr, duration
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, seed_data)
+    """, seed_ftmo)
     
     conn.commit()
     conn.close()
-    print("Hoàn tất khởi tạo dữ liệu trong SQLite!")
+    print("Hoàn tất khởi tạo dữ liệu trong SQLite FTMO!")
+    
+    # ----------------------------------------------------
+    # 2. Initialize The5ers Database
+    # ----------------------------------------------------
+    print("Khởi tạo cơ sở dữ liệu SQLite: the5ers...")
+    conn_5 = sqlite3.connect(DB_THE5ERS)
+    cursor_5 = conn_5.cursor()
+    
+    # Recreate table the5ers_5k
+    cursor_5.execute("DROP TABLE IF EXISTS the5ers_5k")
+    cursor_5.execute("""
+        CREATE TABLE the5ers_5k (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL,
+            trade_id INTEGER,
+            open_time TEXT,
+            close_time TEXT,
+            type TEXT,
+            volume REAL,
+            symbol TEXT,
+            open_price REAL,
+            close_price REAL,
+            sl REAL,
+            tp REAL,
+            swap REAL,
+            commission REAL,
+            profit REAL,
+            net_profit REAL,
+            pips REAL,
+            rr REAL,
+            duration INTEGER
+        )
+    """)
+    
+    # Seed mock data for the5ers-5k so it has default data if user skips token update
+    print("Nạp dữ liệu mẫu mặc định cho The5ers 5k...")
+    seed_5ers = [
+        ('the5ers-5k', 20001, '2026-06-03 08:00:00', '2026-06-03 16:00:00', 'BUY', 0.1, 'AUDUSD', 0.6500, 0.6535, 0.6480, 0.6560, 0.0, -1.00, 351.00, 350.00, 35.0, 3.0, 28800),
+        ('the5ers-5k', 20002, '2026-06-05 11:00:00', '2026-06-05 13:00:00', 'SELL', 0.2, 'USDJPY', 155.00, 155.50, 154.50, 153.50, 0.0, -2.00, -98.00, -100.00, -50.0, 1.0, 7200)
+    ]
+    cursor_5.executemany("""
+        INSERT INTO the5ers_5k (
+            account_id, trade_id, open_time, close_time, type,
+            volume, symbol, open_price, close_price, sl, tp,
+            swap, commission, profit, net_profit, pips, rr, duration
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, seed_5ers)
+    
+    conn_5.commit()
+    conn_5.close()
+    print("Hoàn tất khởi tạo dữ liệu trong SQLite the5ers!")
+
+def update_database_from_excel_files():
+    import glob
+    print("===================================================")
+    print("   [He thong] Dang quet va cap nhat database...")
+    print("===================================================")
+    
+    # 1. Create tables if they do not exist
+    conn_ftmo = sqlite3.connect(DB_FTMO)
+    cursor_ftmo = conn_ftmo.cursor()
+    
+    cursor_ftmo.execute("""
+        CREATE TABLE IF NOT EXISTS FTMO_10k (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL,
+            trade_id INTEGER,
+            open_time TEXT,
+            close_time TEXT,
+            type TEXT,
+            volume REAL,
+            symbol TEXT,
+            open_price REAL,
+            close_price REAL,
+            sl REAL,
+            tp REAL,
+            swap REAL,
+            commission REAL,
+            profit REAL,
+            net_profit REAL,
+            pips REAL,
+            rr REAL,
+            duration INTEGER
+        )
+    """)
+    
+    cursor_ftmo.execute("""
+        CREATE TABLE IF NOT EXISTS FTMO_100k_1 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL,
+            trade_id INTEGER,
+            open_time TEXT,
+            close_time TEXT,
+            type TEXT,
+            volume REAL,
+            symbol TEXT,
+            open_price REAL,
+            close_price REAL,
+            sl REAL,
+            tp REAL,
+            swap REAL,
+            commission REAL,
+            profit REAL,
+            net_profit REAL,
+            pips REAL,
+            rr REAL,
+            duration INTEGER
+        )
+    """)
+    conn_ftmo.commit()
+    conn_ftmo.close()
+    
+    conn_5 = sqlite3.connect(DB_THE5ERS)
+    cursor_5 = conn_5.cursor()
+    cursor_5.execute("""
+        CREATE TABLE IF NOT EXISTS the5ers_5k (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL,
+            trade_id INTEGER,
+            open_time TEXT,
+            close_time TEXT,
+            type TEXT,
+            volume REAL,
+            symbol TEXT,
+            open_price REAL,
+            close_price REAL,
+            sl REAL,
+            tp REAL,
+            swap REAL,
+            commission REAL,
+            profit REAL,
+            net_profit REAL,
+            pips REAL,
+            rr REAL,
+            duration INTEGER
+        )
+    """)
+    conn_5.commit()
+    conn_5.close()
+    
+    # 2. Scan data folder for Excel files
+    excel_dir = 'data'
+    if not os.path.exists(excel_dir):
+        os.makedirs(excel_dir, exist_ok=True)
+        
+    excel_files = glob.glob(os.path.join(excel_dir, "*.xlsx"))
+    
+    # Dictionary to collect trades in memory to deduplicate them
+    # Key: (db_name, table_name, account_id, trade_id) -> trade details tuple
+    trades_by_key = {}
+    
+    # Load existing trades from FTMO database to avoid losing old trades if user deleted excel files
+    if os.path.exists(DB_FTMO):
+        try:
+            conn = sqlite3.connect(DB_FTMO)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='FTMO_10k'")
+            if cursor.fetchone():
+                cursor.execute("""
+                    SELECT account_id, trade_id, open_time, close_time, type,
+                           volume, symbol, open_price, close_price, sl, tp,
+                           swap, commission, profit, net_profit, pips, rr, duration
+                    FROM FTMO_10k
+                """)
+                for row in cursor.fetchall():
+                    key = (DB_FTMO, 'FTMO_10k', row[0], row[1])
+                    trades_by_key[key] = row
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='FTMO_100k_1'")
+            if cursor.fetchone():
+                cursor.execute("""
+                    SELECT account_id, trade_id, open_time, close_time, type,
+                           volume, symbol, open_price, close_price, sl, tp,
+                           swap, commission, profit, net_profit, pips, rr, duration
+                    FROM FTMO_100k_1
+                """)
+                for row in cursor.fetchall():
+                    key = (DB_FTMO, 'FTMO_100k_1', row[0], row[1])
+                    trades_by_key[key] = row
+            conn.close()
+        except Exception as e:
+            print(f"[Canh bao] Khong the doc du lieu cu tu FTMO DB: {e}")
+            
+    # Load existing trades from the5ers database
+    if os.path.exists(DB_THE5ERS):
+        try:
+            conn = sqlite3.connect(DB_THE5ERS)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='the5ers_5k'")
+            if cursor.fetchone():
+                cursor.execute("""
+                    SELECT account_id, trade_id, open_time, close_time, type,
+                           volume, symbol, open_price, close_price, sl, tp,
+                           swap, commission, profit, net_profit, pips, rr, duration
+                    FROM the5ers_5k
+                """)
+                for row in cursor.fetchall():
+                    key = (DB_THE5ERS, 'the5ers_5k', row[0], row[1])
+                    trades_by_key[key] = row
+            conn.close()
+        except Exception as e:
+            print(f"[Canh bao] Khong the doc du lieu cu tu the5ers DB: {e}")
+
+    # Process new/existing Excel files and overwrite trades (to apply updates)
+    for file_path in excel_files:
+        filename = os.path.basename(file_path).lower()
+        
+        # Mapping filename to database and table
+        if '10k' in filename:
+            db_name = DB_FTMO
+            table_name = 'FTMO_10k'
+            account_id = 'ftmo-10k'
+        elif '100k' in filename:
+            db_name = DB_FTMO
+            table_name = 'FTMO_100k_1'
+            account_id = 'ftmo-100k-1'
+        elif 'the5ers' in filename or '5ers' in filename:
+            db_name = DB_THE5ERS
+            table_name = 'the5ers_5k'
+            account_id = 'the5ers-5k'
+        else:
+            print(f"[Bo qua] File '{os.path.basename(file_path)}' khong khop voi tai khoan nao.")
+            continue
+            
+        print(f"[Doc file] {os.path.basename(file_path)} -> Account: {account_id}")
+        file_trades = parse_excel_pure_python(file_path)
+        print(f"   -> Tim thay {len(file_trades)} giao dich.")
+        
+        for t in file_trades:
+            key = (db_name, table_name, account_id, t['trade_id'])
+            trades_by_key[key] = (
+                account_id, t['trade_id'], t['open_time'], t['close_time'], t['type'],
+                t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
+                t['swap'], t['commission'], t['profit'], t['net_profit'], t['pips'], t['rr'], t['duration']
+            )
+
+    # Re-group all trades
+    trades_by_table = {}
+    for key, val in trades_by_key.items():
+        db_name, table_name, _, _ = key
+        table_key = (db_name, table_name)
+        if table_key not in trades_by_table:
+            trades_by_table[table_key] = []
+        trades_by_table[table_key].append(val)
+        
+    # Write to databases
+    for (db_name, table_name), rows in trades_by_table.items():
+        try:
+            conn = sqlite3.connect(db_name)
+            cursor = conn.cursor()
+            cursor.execute(f"DELETE FROM {table_name}")
+            cursor.executemany(f"""
+                INSERT INTO {table_name} (
+                    account_id, trade_id, open_time, close_time, type,
+                    volume, symbol, open_price, close_price, sl, tp,
+                    swap, commission, profit, net_profit, pips, rr, duration
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, rows)
+            conn.commit()
+            conn.close()
+            print(f"[Ghi DB] Da cap nhat {len(rows)} giao dich vao database '{db_name}' bang '{table_name}'.")
+        except Exception as e:
+            print(f"[Loi] Khong the ghi du lieu vao database '{db_name}' bang '{table_name}': {e}")
+            
+    # Ensure personal accounts mock data exists in FTMO_10k
+    try:
+        conn = sqlite3.connect(DB_FTMO)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM FTMO_10k WHERE account_id LIKE 'personal-%'")
+        if cursor.fetchone()[0] == 0:
+            print("[Seed] Dang nap du lieu mau cho personal-1 va personal-2...")
+            seed_ftmo = [
+                ('personal-1', 30001, '2026-06-02 08:30:00', '2026-06-02 12:00:00', 'BUY', 0.1, 'EURUSD', 1.0820, 1.0835, 1.0810, 1.0850, 0.0, -1.00, 151.00, 150.00, 15.0, 1.5, 12600),
+                ('personal-1', 30002, '2026-06-04 13:15:00', '2026-06-04 17:30:00', 'SELL', 0.15, 'XAUUSD', 2310.0, 2305.0, 2312.5, 2300.0, 0.0, -1.50, 81.50, 80.00, 50.0, 2.0, 15300),
+                ('personal-2', 40001, '2026-06-03 14:00:00', '2026-06-03 22:00:00', 'SELL', 0.2, 'GBPUSD', 1.2650, 1.2660, 1.2640, 1.2610, 0.0, -2.00, -198.00, -200.00, -10.0, 1.0, 28800),
+                ('personal-2', 40002, '2026-06-06 09:30:00', '2026-06-06 15:45:00', 'BUY', 0.3, 'EURUSD', 1.0850, 1.0865, 1.0835, 1.0895, 0.0, -3.00, 453.00, 450.00, 15.0, 2.2, 22500)
+            ]
+            cursor.executemany("""
+                INSERT INTO FTMO_10k (
+                    account_id, trade_id, open_time, close_time, type,
+                    volume, symbol, open_price, close_price, sl, tp,
+                    swap, commission, profit, net_profit, pips, rr, duration
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, seed_ftmo)
+            conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[Canh bao] Khong the seed du lieu personal: {e}")
+        
+    # Ensure default mock data for the5ers if table is empty
+    try:
+        conn = sqlite3.connect(DB_THE5ERS)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM the5ers_5k")
+        if cursor.fetchone()[0] == 0:
+            print("[Seed] Dang nap du lieu mau mac dinh cho the5ers-5k...")
+            seed_5ers = [
+                ('the5ers-5k', 20001, '2026-06-03 08:00:00', '2026-06-03 16:00:00', 'BUY', 0.1, 'AUDUSD', 0.6500, 0.6535, 0.6480, 0.6560, 0.0, -1.00, 351.00, 350.00, 35.0, 3.0, 28800),
+                ('the5ers-5k', 20002, '2026-06-05 11:00:00', '2026-06-05 13:00:00', 'SELL', 0.2, 'USDJPY', 155.00, 155.50, 154.50, 153.50, 0.0, -2.00, -98.00, -100.00, -50.0, 1.0, 7200)
+            ]
+            cursor.executemany("""
+                INSERT INTO the5ers_5k (
+                    account_id, trade_id, open_time, close_time, type,
+                    volume, symbol, open_price, close_price, sl, tp,
+                    swap, commission, profit, net_profit, pips, rr, duration
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, seed_5ers)
+            conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[Canh bao] Khong the seed du lieu the5ers: {e}")
+        
+    print("===================================================")
+    print("   [He thong] Da hoan tat cap nhat du lieu!")
+    print("===================================================")
 
 if __name__ == '__main__':
-    init_database()
+    update_database_from_excel_files()
+

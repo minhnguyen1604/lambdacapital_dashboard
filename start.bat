@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 title Lambda Capital Dashboard Server
 echo ===================================================
 echo   Khoi dong Lambda Capital Dashboard Server...
@@ -6,8 +7,8 @@ echo   Server se chay tai dia chi: http://localhost:3000
 echo ===================================================
 echo.
 
-:: Open browser automatically
-start "" "http://localhost:3000"
+:: Open Microsoft Edge automatically
+start msedge "http://localhost:3000"
 
 :: Start the python server
 python server.py

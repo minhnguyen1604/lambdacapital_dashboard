@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lambda Capital</title>
-  <link rel="icon" type="image/jpeg" href="lc_logo.jpg">
+  <link rel="icon" type="image/png" href="lc_logo_transparent.png?v=4">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,7 +31,7 @@
         </a>
         <!-- Collapsed state: original square logo -->
         <div class="brand-logo-container">
-          <img src="lc_logo.jpg" alt="Lambda Capital Logo" class="brand-logo" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=&quot;color:#ff7a00;font-weight:bold;font-size:1.2rem;&quot;>Λ</span>'">
+          <img src="lc_logo_transparent.png" alt="Lambda Capital Logo" class="brand-logo" onerror="this.style.display='none'; this.parentNode.innerHTML='<span style=&quot;color:#ff7a00;font-weight:bold;font-size:1.2rem;&quot;>Λ</span>'">
         </div>
       </div>
       
@@ -703,6 +703,42 @@
     </main>
   </div>
 
+  <!-- The5ers Token Update Modal -->
+  <div class="modal-overlay" id="token-modal" style="display: none;">
+    <div class="token-modal-card" style="gap: 16px; padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 12px;">
+        <h3 style="font-size: 1.15rem;">Update API Token</h3>
+        <button class="token-modal-close-btn" onclick="closeTokenModal()">&times;</button>
+      </div>
+      
+      <div id="modal-initial-options" style="display: flex; flex-direction: column; gap: 16px;">
+        <p style="color: #475569; font-size: 0.9rem; line-height: 1.4; margin: 0; text-align: left;">Would you like to update your API token to fetch the latest trades from The5ers?</p>
+        
+        <div style="display: flex; gap: 14px; justify-content: flex-end; margin-top: 6px;">
+          <button class="btn-premium-no" onclick="handleTokenModalNo()">Use Cached</button>
+          <button class="btn-premium-yes" onclick="showTokenInputForm()">Update Token</button>
+        </div>
+      </div>
+      
+      <form id="token-input-form" style="display: none; flex-direction: column; gap: 14px; margin: 0;" onsubmit="handleTokenSubmit(event)">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label for="the5ers-token-field" style="font-size: 0.8rem; color: #475569; font-weight: 600; text-align: left;">Bearer Token (JWT):</label>
+          <textarea id="the5ers-token-field" class="token-textarea" rows="3" placeholder="Paste your token here (starts with eyJ...)"></textarea>
+        </div>
+        <div style="display: flex; gap: 14px; justify-content: flex-end; margin-top: 6px;">
+          <button type="button" class="btn-premium-no" onclick="hideTokenInputForm()">Back</button>
+          <button type="submit" class="btn-premium-yes" id="btn-token-submit">Confirm</button>
+        </div>
+      </form>
+      
+      <!-- Loading Indicator -->
+      <div id="token-loading" style="display: none; text-align: center; padding: 15px 0;">
+        <div class="spinner" style="margin: 0 auto 12px auto; width: 28px; height: 28px; border: 3.5px solid rgba(0,0,0,0.05); border-top-color: #ff7a00; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <span style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block;">Fetching trades...</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Dynamic Toast Notification (Hidden but styled) -->
   <div class="toast" id="toast-notif">
     <div id="toast-icon" style="font-size: 1.2rem;"></div>
@@ -710,6 +746,6 @@
   </div>
 
   <!-- Main JavaScript App Logic -->
-  <script src="app.js"></script>
+  <script src="app.js?v=20260703_v5"></script>
 </body>
 </html>
