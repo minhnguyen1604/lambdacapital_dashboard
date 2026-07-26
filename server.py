@@ -832,8 +832,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 # Create data directory if not exists
                 os.makedirs('data', exist_ok=True)
                 
-                # 1. Save to data/the5ers_5k.xlsx
-                save_to_excel_openpyxl(trades, os.path.join('data', 'the5ers_5k.xlsx'))
+                # 1. Save to data/the5ers_5k_Challenge.xlsx
+                save_to_excel_openpyxl(trades, os.path.join('data', 'the5ers_5k_Challenge.xlsx'))
                 
                 # 2. Save to isolated SQLite DB 'the5ers' table 'the5ers_5k'
                 save_to_the5ers_db(trades)
