@@ -17,10 +17,14 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
 PORT = 3000
-DB_PATH = 'FTMO'
-EXCEL_PATH = os.path.join('data', 'FTMO_10k.xlsx')
-EXCEL_100K = os.path.join('data', 'FTMO_100k_1.xlsx')
-DB_THE5ERS = 'the5ers'
+DB_FTMO_CHALLENGE = 'FTMO_Challenge'
+DB_FTMO_FUNDED = 'FTMO_Funded'
+DB_THE5ERS_CHALLENGE = 'the5ers_Challenge'
+DB_THE5ERS_FUNDED = 'the5ers_Funded'
+DB_PATH = DB_FTMO_CHALLENGE
+DB_THE5ERS = DB_THE5ERS_CHALLENGE
+EXCEL_PATH = os.path.join('data', 'FTMO_10k_Challenge.xlsx')
+EXCEL_100K = os.path.join('data', 'FTMO_100k_1_Challenge.xlsx')
 
 # Fallback mock data for accounts other than ftmo-10k and ftmo-100k-1
 MOCK_TRADES = {
@@ -352,14 +356,15 @@ def save_to_excel_openpyxl(trades, excel_path):
     wb.save(excel_path)
     print(f"Saved {len(trades)} trades to Excel: {excel_path}")
 
-def save_to_the5ers_db(trades):
+def save_to_the5ers_db(trades, db_file=None, target_account_id='challenge-the5ers-5k'):
+    if not db_file:
+        db_file = DB_THE5ERS_CHALLENGE if 'challenge' in target_account_id else DB_THE5ERS_FUNDED
     try:
-        conn = sqlite3.connect(DB_THE5ERS)
+        conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
         
-        cursor.execute("DROP TABLE IF EXISTS the5ers_5k")
         cursor.execute("""
-            CREATE TABLE the5ers_5k (
+            CREATE TABLE IF NOT EXISTS the5ers_5k (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_id TEXT NOT NULL,
                 trade_id INTEGER,
@@ -382,14 +387,15 @@ def save_to_the5ers_db(trades):
             )
         """)
         
+        cursor.execute("DELETE FROM the5ers_5k WHERE account_id = ?", (target_account_id,))
+        
         insert_data = []
         for t in trades:
-            for acc_id in ['the5ers-5k', 'challenge-the5ers-5k']:
-                insert_data.append((
-                    acc_id, t['id'], t['open_time'], t['close_time'], t['direction'],
-                    t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
-                    t['swap'], t['commission'], t['profit'], t['amount'], t['pips'], t['rr'], t['duration']
-                ))
+            insert_data.append((
+                target_account_id, t['id'], t['open_time'], t['close_time'], t['direction'],
+                t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
+                t['swap'], t['commission'], t['profit'], t['amount'], t['pips'], t['rr'], t['duration']
+            ))
             
         if insert_data:
             cursor.executemany("""
@@ -402,9 +408,9 @@ def save_to_the5ers_db(trades):
             
         conn.commit()
         conn.close()
-        print(f"Saved {len(trades)} trades to SQLite the5ers database.")
+        print(f"Saved {len(trades)} trades to SQLite '{db_file}' database for '{target_account_id}'.")
     except Exception as e:
-        print(f"Error saving to the5ers database: {e}")
+        print(f"Error saving to {db_file} database: {e}")
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -453,14 +459,23 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         db_file = DB_PATH
         table_name = 'FTMO_10k'
         
-        if account_id in ['ftmo-10k', 'challenge-ftmo-10k']:
-            db_file = DB_PATH
+        if account_id == 'challenge-ftmo-10k':
+            db_file = DB_FTMO_CHALLENGE
             table_name = 'FTMO_10k'
-        elif account_id in ['ftmo-100k-1', 'challenge-ftmo-100k-1']:
-            db_file = DB_PATH
+        elif account_id == 'challenge-ftmo-100k-1':
+            db_file = DB_FTMO_CHALLENGE
             table_name = 'FTMO_100k_1'
-        elif account_id in ['the5ers-5k', 'challenge-the5ers-5k']:
-            db_file = DB_THE5ERS
+        elif account_id == 'challenge-the5ers-5k':
+            db_file = DB_THE5ERS_CHALLENGE
+            table_name = 'the5ers_5k'
+        elif account_id == 'ftmo-10k':
+            db_file = DB_FTMO_FUNDED
+            table_name = 'FTMO_10k'
+        elif account_id == 'ftmo-100k-1':
+            db_file = DB_FTMO_FUNDED
+            table_name = 'FTMO_100k_1'
+        elif account_id == 'the5ers-5k':
+            db_file = DB_THE5ERS_FUNDED
             table_name = 'the5ers_5k'
             
         try:
@@ -828,15 +843,23 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     
                 page += 1
                 
+            parsed_url = urllib.parse.urlparse(self.path)
+            query_params = urllib.parse.parse_qs(parsed_url.query)
+            target_acc = query_params.get('account', [payload.get('account', 'challenge-the5ers-5k')])[0]
+            
+            is_challenge = 'challenge' in target_acc
+            excel_filename = 'the5ers_5k_Challenge.xlsx' if is_challenge else 'the5ers_5k_Funded.xlsx'
+            db_file = DB_THE5ERS_CHALLENGE if is_challenge else DB_THE5ERS_FUNDED
+
             if trades:
                 # Create data directory if not exists
                 os.makedirs('data', exist_ok=True)
                 
-                # 1. Save to data/the5ers_5k_Challenge.xlsx
-                save_to_excel_openpyxl(trades, os.path.join('data', 'the5ers_5k_Challenge.xlsx'))
+                # 1. Save to Excel file
+                save_to_excel_openpyxl(trades, os.path.join('data', excel_filename))
                 
-                # 2. Save to isolated SQLite DB 'the5ers' table 'the5ers_5k'
-                save_to_the5ers_db(trades)
+                # 2. Save to SQLite DB table 'the5ers_5k'
+                save_to_the5ers_db(trades, db_file=db_file, target_account_id=target_acc)
             
             # Format response for frontend
             formatted = []

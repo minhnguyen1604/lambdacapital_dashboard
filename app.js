@@ -108,7 +108,7 @@ function switchAccount(accountId, breadcrumbText) {
   document.getElementById('current-breadcrumb-path').innerHTML = breadcrumbText;
   
   // Update panels visibility
-  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'challenge-the5ers-5k'];
+  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'challenge-the5ers-5k', 'ftmo-10k', 'ftmo-100k-1', 'the5ers-5k'];
   if (enabledAccounts.includes(accountId)) {
     document.getElementById('view-forex-account').style.display = 'flex';
     document.getElementById('view-stock').style.display = 'none';
@@ -273,7 +273,7 @@ function restartComingSoonAnimation() {
 
 // --- Data Render Functions ---
 async function renderApp() {
-  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'challenge-the5ers-5k'];
+  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'challenge-the5ers-5k', 'ftmo-10k', 'ftmo-100k-1', 'the5ers-5k'];
   if (activeView !== 'forex-account' || !enabledAccounts.includes(currentAccountId)) return;
   
   try {
@@ -1971,12 +1971,12 @@ async function handleTokenSubmit(event) {
   document.getElementById('token-loading').style.display = 'block';
   
   try {
-    const response = await fetch('/api/the5ers/update-token', {
+    const response = await fetch(`/api/the5ers/update-token?account=${encodeURIComponent(currentAccountId)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ token: token })
+      body: JSON.stringify({ token: token, account: currentAccountId })
     });
     
     if (response.ok) {

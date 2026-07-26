@@ -12,10 +12,12 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
-DB_FTMO = 'FTMO'
-DB_THE5ERS = 'the5ers'
-EXCEL_10K = os.path.join('data', 'FTMO_10k.xlsx')
-EXCEL_100K = os.path.join('data', 'FTMO_100k_1.xlsx')
+DB_FTMO_CHALLENGE = 'FTMO_Challenge'
+DB_FTMO_FUNDED = 'FTMO_Funded'
+DB_THE5ERS_CHALLENGE = 'the5ers_Challenge'
+DB_THE5ERS_FUNDED = 'the5ers_Funded'
+DB_FTMO = DB_FTMO_CHALLENGE # Fallback constant
+DB_THE5ERS = DB_THE5ERS_CHALLENGE # Fallback constant
 
 def parse_excel_pure_python(excel_path):
     trades = []
@@ -329,87 +331,89 @@ def update_database_from_excel_files():
     print("   [He thong] Dang quet va cap nhat database...")
     print("===================================================")
     
-    # 1. Create tables if they do not exist
-    conn_ftmo = sqlite3.connect(DB_FTMO)
-    cursor_ftmo = conn_ftmo.cursor()
+    # 1. Create tables in all 4 DB files if they do not exist
+    for db_f in [DB_FTMO_CHALLENGE, DB_FTMO_FUNDED]:
+        conn_ftmo = sqlite3.connect(db_f)
+        cursor_ftmo = conn_ftmo.cursor()
+        
+        cursor_ftmo.execute("""
+            CREATE TABLE IF NOT EXISTS FTMO_10k (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT NOT NULL,
+                trade_id INTEGER,
+                open_time TEXT,
+                close_time TEXT,
+                type TEXT,
+                volume REAL,
+                symbol TEXT,
+                open_price REAL,
+                close_price REAL,
+                sl REAL,
+                tp REAL,
+                swap REAL,
+                commission REAL,
+                profit REAL,
+                net_profit REAL,
+                pips REAL,
+                rr REAL,
+                duration INTEGER
+            )
+        """)
+        
+        cursor_ftmo.execute("""
+            CREATE TABLE IF NOT EXISTS FTMO_100k_1 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT NOT NULL,
+                trade_id INTEGER,
+                open_time TEXT,
+                close_time TEXT,
+                type TEXT,
+                volume REAL,
+                symbol TEXT,
+                open_price REAL,
+                close_price REAL,
+                sl REAL,
+                tp REAL,
+                swap REAL,
+                commission REAL,
+                profit REAL,
+                net_profit REAL,
+                pips REAL,
+                rr REAL,
+                duration INTEGER
+            )
+        """)
+        conn_ftmo.commit()
+        conn_ftmo.close()
     
-    cursor_ftmo.execute("""
-        CREATE TABLE IF NOT EXISTS FTMO_10k (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id TEXT NOT NULL,
-            trade_id INTEGER,
-            open_time TEXT,
-            close_time TEXT,
-            type TEXT,
-            volume REAL,
-            symbol TEXT,
-            open_price REAL,
-            close_price REAL,
-            sl REAL,
-            tp REAL,
-            swap REAL,
-            commission REAL,
-            profit REAL,
-            net_profit REAL,
-            pips REAL,
-            rr REAL,
-            duration INTEGER
-        )
-    """)
-    
-    cursor_ftmo.execute("""
-        CREATE TABLE IF NOT EXISTS FTMO_100k_1 (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id TEXT NOT NULL,
-            trade_id INTEGER,
-            open_time TEXT,
-            close_time TEXT,
-            type TEXT,
-            volume REAL,
-            symbol TEXT,
-            open_price REAL,
-            close_price REAL,
-            sl REAL,
-            tp REAL,
-            swap REAL,
-            commission REAL,
-            profit REAL,
-            net_profit REAL,
-            pips REAL,
-            rr REAL,
-            duration INTEGER
-        )
-    """)
-    conn_ftmo.commit()
-    conn_ftmo.close()
-    
-    conn_5 = sqlite3.connect(DB_THE5ERS)
-    cursor_5 = conn_5.cursor()
-    cursor_5.execute("""
-        CREATE TABLE IF NOT EXISTS the5ers_5k (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            account_id TEXT NOT NULL,
-            trade_id INTEGER,
-            open_time TEXT,
-            close_time TEXT,
-            type TEXT,
-            volume REAL,
-            symbol TEXT,
-            open_price REAL,
-            close_price REAL,
-            sl REAL,
-            tp REAL,
-            swap REAL,
-            commission REAL,
-            profit REAL,
-            net_profit REAL,
-            pips REAL,
-            rr REAL,
-            duration INTEGER
-        )
-    """)
-    conn_5.commit()
-    conn_5.close()
+    for db_5 in [DB_THE5ERS_CHALLENGE, DB_THE5ERS_FUNDED]:
+        conn_5 = sqlite3.connect(db_5)
+        cursor_5 = conn_5.cursor()
+        cursor_5.execute("""
+            CREATE TABLE IF NOT EXISTS the5ers_5k (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT NOT NULL,
+                trade_id INTEGER,
+                open_time TEXT,
+                close_time TEXT,
+                type TEXT,
+                volume REAL,
+                symbol TEXT,
+                open_price REAL,
+                close_price REAL,
+                sl REAL,
+                tp REAL,
+                swap REAL,
+                commission REAL,
+                profit REAL,
+                net_profit REAL,
+                pips REAL,
+                rr REAL,
+                duration INTEGER
+            )
+        """)
+        conn_5.commit()
+        conn_5.close()
     
     # 2. Scan data folder for Excel files
     excel_dir = 'data'
@@ -422,94 +426,70 @@ def update_database_from_excel_files():
     # Key: (db_name, table_name, account_id, trade_id) -> trade details tuple
     trades_by_key = {}
     
-    # Load existing trades from FTMO database to avoid losing old trades if user deleted excel files
-    if os.path.exists(DB_FTMO):
-        try:
-            conn = sqlite3.connect(DB_FTMO)
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='FTMO_10k'")
-            if cursor.fetchone():
-                cursor.execute("""
-                    SELECT account_id, trade_id, open_time, close_time, type,
-                           volume, symbol, open_price, close_price, sl, tp,
-                           swap, commission, profit, net_profit, pips, rr, duration
-                    FROM FTMO_10k
-                """)
-                for row in cursor.fetchall():
-                    key = (DB_FTMO, 'FTMO_10k', row[0], row[1])
-                    trades_by_key[key] = row
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='FTMO_100k_1'")
-            if cursor.fetchone():
-                cursor.execute("""
-                    SELECT account_id, trade_id, open_time, close_time, type,
-                           volume, symbol, open_price, close_price, sl, tp,
-                           swap, commission, profit, net_profit, pips, rr, duration
-                    FROM FTMO_100k_1
-                """)
-                for row in cursor.fetchall():
-                    key = (DB_FTMO, 'FTMO_100k_1', row[0], row[1])
-                    trades_by_key[key] = row
-            conn.close()
-        except Exception as e:
-            print(f"[Canh bao] Khong the doc du lieu cu tu FTMO DB: {e}")
-            
-    # Load existing trades from the5ers database
-    if os.path.exists(DB_THE5ERS):
-        try:
-            conn = sqlite3.connect(DB_THE5ERS)
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='the5ers_5k'")
-            if cursor.fetchone():
-                cursor.execute("""
-                    SELECT account_id, trade_id, open_time, close_time, type,
-                           volume, symbol, open_price, close_price, sl, tp,
-                           swap, commission, profit, net_profit, pips, rr, duration
-                    FROM the5ers_5k
-                """)
-                for row in cursor.fetchall():
-                    key = (DB_THE5ERS, 'the5ers_5k', row[0], row[1])
-                    trades_by_key[key] = row
-            conn.close()
-        except Exception as e:
-            print(f"[Canh bao] Khong the doc du lieu cu tu the5ers DB: {e}")
+    # Load existing trades from databases to preserve historical data
+    for db_name, tbl_list in [
+        (DB_FTMO_CHALLENGE, [('FTMO_10k', 'challenge-ftmo-10k'), ('FTMO_100k_1', 'challenge-ftmo-100k-1')]),
+        (DB_FTMO_FUNDED, [('FTMO_10k', 'ftmo-10k'), ('FTMO_100k_1', 'ftmo-100k-1')]),
+        (DB_THE5ERS_CHALLENGE, [('the5ers_5k', 'challenge-the5ers-5k')]),
+        (DB_THE5ERS_FUNDED, [('the5ers_5k', 'the5ers-5k')])
+    ]:
+        if os.path.exists(db_name):
+            try:
+                conn = sqlite3.connect(db_name)
+                cursor = conn.cursor()
+                for table_name, default_acc_id in tbl_list:
+                    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                    if cursor.fetchone():
+                        cursor.execute(f"""
+                            SELECT account_id, trade_id, open_time, close_time, type,
+                                   volume, symbol, open_price, close_price, sl, tp,
+                                   swap, commission, profit, net_profit, pips, rr, duration
+                            FROM {table_name}
+                        """)
+                        for row in cursor.fetchall():
+                            key = (db_name, table_name, row[0], row[1])
+                            trades_by_key[key] = row
+                conn.close()
+            except Exception as e:
+                print(f"[Canh bao] Khong the doc du lieu cu tu {db_name}: {e}")
 
     # Process new/existing Excel files and overwrite trades (to apply updates)
     for file_path in excel_files:
         filename = os.path.basename(file_path).lower()
-        
-        # Mapping filename to database and table
         is_challenge = 'challenge' in filename
-        target_account_ids = []
-        if '10k' in filename:
-            db_name = DB_FTMO
-            table_name = 'FTMO_10k'
-            if is_challenge:
-                target_account_ids = ['challenge-ftmo-10k']
+        is_funded = 'funded' in filename
+        
+        target_mappings = []
+        if is_challenge:
+            if '10k' in filename:
+                target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_10k', 'challenge-ftmo-10k'))
+            elif '100k' in filename:
+                target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_100k_1', 'challenge-ftmo-100k-1'))
+            elif 'the5ers' in filename or '5ers' in filename:
+                target_mappings.append((DB_THE5ERS_CHALLENGE, 'the5ers_5k', 'challenge-the5ers-5k'))
+        else: # Funded or generic filename
+            if '10k' in filename:
+                target_mappings.append((DB_FTMO_FUNDED, 'FTMO_10k', 'ftmo-10k'))
+                # If no separate challenge file exists, also populate challenge
+                if not any('10k' in os.path.basename(f).lower() and 'challenge' in os.path.basename(f).lower() for f in excel_files):
+                    target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_10k', 'challenge-ftmo-10k'))
+            elif '100k' in filename:
+                target_mappings.append((DB_FTMO_FUNDED, 'FTMO_100k_1', 'ftmo-100k-1'))
+                if not any('100k' in os.path.basename(f).lower() and 'challenge' in os.path.basename(f).lower() for f in excel_files):
+                    target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_100k_1', 'challenge-ftmo-100k-1'))
+            elif 'the5ers' in filename or '5ers' in filename:
+                target_mappings.append((DB_THE5ERS_FUNDED, 'the5ers_5k', 'the5ers-5k'))
+                if not any(('the5ers' in os.path.basename(f).lower() or '5ers' in os.path.basename(f).lower()) and 'challenge' in os.path.basename(f).lower() for f in excel_files):
+                    target_mappings.append((DB_THE5ERS_CHALLENGE, 'the5ers_5k', 'challenge-the5ers-5k'))
             else:
-                target_account_ids = ['challenge-ftmo-10k', 'ftmo-10k']
-        elif '100k' in filename:
-            db_name = DB_FTMO
-            table_name = 'FTMO_100k_1'
-            if is_challenge:
-                target_account_ids = ['challenge-ftmo-100k-1']
-            else:
-                target_account_ids = ['challenge-ftmo-100k-1', 'ftmo-100k-1']
-        elif 'the5ers' in filename or '5ers' in filename:
-            db_name = DB_THE5ERS
-            table_name = 'the5ers_5k'
-            if is_challenge:
-                target_account_ids = ['challenge-the5ers-5k']
-            else:
-                target_account_ids = ['challenge-the5ers-5k', 'the5ers-5k']
-        else:
-            print(f"[Bo qua] File '{os.path.basename(file_path)}' khong khop voi tai khoan nao.")
-            continue
+                print(f"[Bo qua] File '{os.path.basename(file_path)}' khong khop voi tai khoan nao.")
+                continue
             
-        print(f"[Doc file] {os.path.basename(file_path)} -> Account(s): {', '.join(target_account_ids)}")
+        print(f"[Doc file] {os.path.basename(file_path)} -> Target(s): {[m[2] for m in target_mappings]}")
         file_trades = parse_excel_pure_python(file_path)
         print(f"   -> Tim thay {len(file_trades)} giao dich.")
         
-        for acc_id in target_account_ids:
+        for (db_name, table_name, acc_id) in target_mappings:
             for t in file_trades:
                 key = (db_name, table_name, acc_id, t['trade_id'])
                 trades_by_key[key] = (
@@ -518,7 +498,7 @@ def update_database_from_excel_files():
                     t['swap'], t['commission'], t['profit'], t['net_profit'], t['pips'], t['rr'], t['duration']
                 )
 
-    # Re-group all trades
+    # Re-group all trades by (db_name, table_name)
     trades_by_table = {}
     for key, val in trades_by_key.items():
         db_name, table_name, _, _ = key
