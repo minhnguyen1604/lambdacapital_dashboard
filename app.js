@@ -11,6 +11,12 @@ const ACCOUNTS_CONFIG = {
   'ftmo-100k-3': { name: 'FTMO 100k #3', capital: 100000, type: 'FTMO' },
   'ftmo-100k-4': { name: 'FTMO 100k #4', capital: 100000, type: 'FTMO' },
   'the5ers-5k': { name: 'The5ers 5k', capital: 5000, type: 'The5ers' },
+  'challenge-ftmo-10k': { name: 'FTMO 10k', capital: 10000, type: 'FTMO' },
+  'challenge-ftmo-100k-1': { name: 'FTMO 100k #1', capital: 100000, type: 'FTMO' },
+  'challenge-ftmo-100k-2': { name: 'FTMO 100k #2', capital: 100000, type: 'FTMO' },
+  'challenge-ftmo-100k-3': { name: 'FTMO 100k #3', capital: 100000, type: 'FTMO' },
+  'challenge-ftmo-100k-4': { name: 'FTMO 100k #4', capital: 100000, type: 'FTMO' },
+  'challenge-the5ers-5k': { name: 'The5ers 5k', capital: 5000, type: 'The5ers' },
   'personal-1': { name: 'Personal Acc #1', capital: 5000, type: 'Personal' },
   'personal-2': { name: 'Personal Acc #2', capital: 10000, type: 'Personal' }
 };
@@ -29,7 +35,7 @@ let dateRangeEnd = null;   // null = no end constraint
 // --- App Initializer ---
 document.addEventListener('DOMContentLoaded', () => {
   // Setup default active states in sidebar
-  document.getElementById('forex-sub').style.maxHeight = '600px';
+  document.getElementById('forex-sub').style.maxHeight = '1000px';
   document.getElementById('tkq-nested').style.maxHeight = '400px';
   
   // Restore sidebar state

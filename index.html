@@ -98,6 +98,44 @@
               </div>
             </div>
             
+            <!-- Challenge Accounts -->
+            <div class="nav-sub-item" id="nav-challenge-accounts" onclick="toggleNavGroup('challenge-nested')">
+              <span>Challenge Accounts</span>
+              <span class="nav-item-chevron">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+            
+            <div class="nav-nested-list" id="challenge-nested" style="max-height: 0px; overflow: hidden;">
+              <!-- FTMO -->
+              <div style="margin-bottom: 4px;">
+                <div class="nav-nested-item" style="font-weight: 600; color: var(--text-secondary); pointer-events: none; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                  <span style="display:inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--accent-orange);"></span>
+                  FTMO
+                </div>
+                <div style="padding-left: 10px; display: flex; flex-direction: column; gap: 2px;">
+                  <div class="nav-nested-item" id="acc-challenge-ftmo-10k" onclick="switchAccount('challenge-ftmo-10k', 'Forex / Challenge Accounts / FTMO / 10k')">FTMO 10k</div>
+                  <div class="nav-nested-item" id="acc-challenge-ftmo-100k-1" onclick="switchAccount('challenge-ftmo-100k-1', 'Forex / Challenge Accounts / FTMO / 100k #1')">FTMO 100k #1</div>
+                  <div class="nav-nested-item" id="acc-challenge-ftmo-100k-2" onclick="switchAccount('challenge-ftmo-100k-2', 'Forex / Challenge Accounts / FTMO / 100k #2')">FTMO 100k #2</div>
+                  <div class="nav-nested-item" id="acc-challenge-ftmo-100k-3" onclick="switchAccount('challenge-ftmo-100k-3', 'Forex / Challenge Accounts / FTMO / 100k #3')">FTMO 100k #3</div>
+                  <div class="nav-nested-item" id="acc-challenge-ftmo-100k-4" onclick="switchAccount('challenge-ftmo-100k-4', 'Forex / Challenge Accounts / FTMO / 100k #4')">FTMO 100k #4</div>
+                </div>
+              </div>
+              
+              <!-- The5ers -->
+              <div>
+                <div class="nav-nested-item" style="font-weight: 600; color: var(--text-secondary); pointer-events: none; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                  <span style="display:inline-block; width: 4px; height: 4px; border-radius: 50%; background: #3b82f6;"></span>
+                  The5ers
+                </div>
+                <div style="padding-left: 10px; display: flex; flex-direction: column; gap: 2px;">
+                  <div class="nav-nested-item" id="acc-challenge-the5ers-5k" onclick="switchAccount('challenge-the5ers-5k', 'Forex / Challenge Accounts / The5ers / 5k')">The5ers 5k</div>
+                </div>
+              </div>
+            </div>
+            
             <!-- Personal Accounts -->
             <div class="nav-sub-item" id="acc-personal-1" onclick="switchAccount('personal-1', 'Forex / Personal Accounts')">
               <span>Personal Accounts</span>
@@ -746,6 +784,6 @@
   </div>
 
   <!-- Main JavaScript App Logic -->
-  <script src="app.js?v=20260703_v5"></script>
+  <script src="app.js?v=20260726_v1"></script>
 </body>
 </html>
