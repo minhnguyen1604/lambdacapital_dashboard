@@ -273,7 +273,7 @@ function restartComingSoonAnimation() {
 
 // --- Data Render Functions ---
 async function renderApp() {
-  const enabledAccounts = ['ftmo-10k', 'ftmo-100k-1', 'the5ers-5k'];
+  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'the5ers-5k'];
   if (activeView !== 'forex-account' || !enabledAccounts.includes(currentAccountId)) return;
   
   try {
@@ -1255,10 +1255,10 @@ function onCalendarSelectChange() {
 
 // --- Render Summary/Aggregate View ---
 function getTradesForAccount(accId) {
-  if (accId === 'ftmo-10k') {
+  if (accId === 'ftmo-10k' || accId === 'challenge-ftmo-10k') {
     return typeof FTMO_10K_TRADES !== 'undefined' ? FTMO_10K_TRADES : [];
   }
-  if (accId === 'the5ers-5k') {
+  if (accId === 'the5ers-5k' || accId === 'challenge-the5ers-5k') {
     return [
       { id: 20001, date: '2026-06-03', symbol: 'AUDUSD', direction: 'BUY', amount: 350.0, rr: 3.0, duration: 28800 },
       { id: 20002, date: '2026-06-05', symbol: 'USDJPY', direction: 'SELL', amount: -100.0, rr: 1.0, duration: 7200 }
