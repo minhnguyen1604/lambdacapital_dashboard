@@ -70,7 +70,7 @@
               </span>
             </div>
             
-            <div class="nav-nested-list" id="challenge-nested" style="max-height: 0px; overflow: hidden;">
+            <div class="nav-nested-list" id="challenge-nested">
               <!-- FTMO -->
               <div style="margin-bottom: 4px;">
                 <div class="nav-nested-item" style="font-weight: 600; color: var(--text-secondary); pointer-events: none; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
@@ -78,7 +78,7 @@
                   FTMO
                 </div>
                 <div style="padding-left: 10px; display: flex; flex-direction: column; gap: 2px;">
-                  <div class="nav-nested-item" id="acc-challenge-ftmo-10k" onclick="switchAccount('challenge-ftmo-10k', 'Forex / Challenge Accounts / FTMO / 10k')">FTMO 10k</div>
+                  <div class="nav-nested-item active" id="acc-challenge-ftmo-10k" onclick="switchAccount('challenge-ftmo-10k', 'Forex / Challenge Accounts / FTMO / 10k')">FTMO 10k</div>
                   <div class="nav-nested-item" id="acc-challenge-ftmo-100k-1" onclick="switchAccount('challenge-ftmo-100k-1', 'Forex / Challenge Accounts / FTMO / 100k #1')">FTMO 100k #1</div>
                   <div class="nav-nested-item" id="acc-challenge-ftmo-100k-2" onclick="switchAccount('challenge-ftmo-100k-2', 'Forex / Challenge Accounts / FTMO / 100k #2')">FTMO 100k #2</div>
                   <div class="nav-nested-item" id="acc-challenge-ftmo-100k-3" onclick="switchAccount('challenge-ftmo-100k-3', 'Forex / Challenge Accounts / FTMO / 100k #3')">FTMO 100k #3</div>
@@ -108,7 +108,7 @@
               </span>
             </div>
             
-            <div class="nav-nested-list" id="tkq-nested">
+            <div class="nav-nested-list" id="tkq-nested" style="max-height: 0px; overflow: hidden;">
               <!-- FTMO -->
               <div style="margin-bottom: 4px;">
                 <div class="nav-nested-item" style="font-weight: 600; color: var(--text-secondary); pointer-events: none; padding-bottom: 4px; display: flex; align-items: center; gap: 6px;">
@@ -116,7 +116,7 @@
                   FTMO
                 </div>
                 <div style="padding-left: 10px; display: flex; flex-direction: column; gap: 2px;">
-                  <div class="nav-nested-item active" id="acc-ftmo-10k" onclick="switchAccount('ftmo-10k', 'Forex / Funded Accounts / FTMO / 10k')">FTMO 10k</div>
+                  <div class="nav-nested-item" id="acc-ftmo-10k" onclick="switchAccount('ftmo-10k', 'Forex / Funded Accounts / FTMO / 10k')">FTMO 10k</div>
                   <div class="nav-nested-item" id="acc-ftmo-100k-1" onclick="switchAccount('ftmo-100k-1', 'Forex / Funded Accounts / FTMO / 100k #1')">FTMO 100k #1</div>
                   <div class="nav-nested-item" id="acc-ftmo-100k-2" onclick="switchAccount('ftmo-100k-2', 'Forex / Funded Accounts / FTMO / 100k #2')">FTMO 100k #2</div>
                   <div class="nav-nested-item" id="acc-ftmo-100k-3" onclick="switchAccount('ftmo-100k-3', 'Forex / Funded Accounts / FTMO / 100k #3')">FTMO 100k #3</div>
@@ -196,7 +196,7 @@
         <div style="display: flex; align-items: center; gap: 24px; width: 100%;">
           <div id="header-breadcrumbs-container" style="display: flex; align-items: center; gap: 14px;">
             <div class="breadcrumbs breadcrumb-container">
-              <span class="breadcrumb-active" id="current-breadcrumb-path">Forex / Funded Accounts / FTMO / 10k</span>
+              <span class="breadcrumb-active" id="current-breadcrumb-path">Forex / Challenge Accounts / FTMO / 10k</span>
             </div>
           </div>
           
@@ -784,6 +784,6 @@
   </div>
 
   <!-- Main JavaScript App Logic -->
-  <script src="app.js?v=20260726_v2"></script>
+  <script src="app.js?v=20260726_v3"></script>
 </body>
 </html>

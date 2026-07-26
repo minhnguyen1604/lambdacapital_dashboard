@@ -452,13 +452,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         db_file = DB_PATH
         table_name = 'FTMO_10k'
         
-        if account_id == 'ftmo-10k':
+        if account_id in ['ftmo-10k', 'challenge-ftmo-10k']:
             db_file = DB_PATH
             table_name = 'FTMO_10k'
-        elif account_id == 'ftmo-100k-1':
+        elif account_id in ['ftmo-100k-1', 'challenge-ftmo-100k-1']:
             db_file = DB_PATH
             table_name = 'FTMO_100k_1'
-        elif account_id == 'the5ers-5k':
+        elif account_id in ['the5ers-5k', 'challenge-the5ers-5k']:
             db_file = DB_THE5ERS
             table_name = 'the5ers_5k'
             
@@ -498,21 +498,47 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     })
                     
                 conn.close()
-                db_success = True
+                if len(trades) > 0:
+                    db_success = True
         except Exception as e:
             print(f"Error querying SQLite database '{db_file}' table '{table_name}': {e}")
             db_success = False
 
         if not db_success:
             print(f"DATABASE FALLBACK ACTIVE: Loading data for '{account_id}'...")
-            if account_id == 'ftmo-10k':
-                trades = parse_excel_pure_python(EXCEL_PATH)
-            elif account_id == 'ftmo-100k-1':
-                trades = parse_excel_pure_python(EXCEL_100K)
-            elif account_id == 'the5ers-5k':
-                trades = parse_excel_pure_python(os.path.join('data', 'the5ers_5k.xlsx'))
-                if not trades:
-                    trades = MOCK_TRADES.get(account_id, [])
+            import glob
+            excel_files = glob.glob(os.path.join('data', '*.xlsx'))
+            matched_file = None
+            is_ch = 'challenge' in account_id
+            
+            for ef in excel_files:
+                fn = os.path.basename(ef).lower()
+                if is_ch and 'challenge' not in fn:
+                    continue
+                if not is_ch and 'challenge' in fn:
+                    continue
+                if '10k' in account_id and '10k' in fn:
+                    matched_file = ef
+                    break
+                elif '100k' in account_id and '100k' in fn:
+                    matched_file = ef
+                    break
+                elif 'the5ers' in account_id and ('the5ers' in fn or '5ers' in fn):
+                    matched_file = ef
+                    break
+                    
+            if matched_file and os.path.exists(matched_file):
+                raw_trades = parse_excel_pure_python(matched_file)
+                for t in raw_trades:
+                    trades.append({
+                        'id': t['trade_id'],
+                        'date': t['close_time'].split(' ')[0] if t['close_time'] else (t['open_time'].split(' ')[0] if t['open_time'] else None),
+                        'symbol': t['symbol'],
+                        'direction': t['type'].upper() if t['type'] else 'BUY',
+                        'amount': t['net_profit'] or 0.0,
+                        'rr': t['rr'] or 2.0,
+                        'duration': t['duration'] or 0
+                    })
             else:
                 trades = MOCK_TRADES.get(account_id, [])
 

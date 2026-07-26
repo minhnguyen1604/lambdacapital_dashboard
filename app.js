@@ -24,7 +24,7 @@ const ACCOUNTS_CONFIG = {
 // System current date (hardcoded to June 9, 2026 to match the user's screenshot context)
 const SYSTEM_DATE = new Date();
 
-let currentAccountId = 'ftmo-10k';
+let currentAccountId = 'challenge-ftmo-10k';
 let activeView = 'forex-account'; // 'forex-account', 'stock', 'summary'
 let activeCalendarDate = new Date(SYSTEM_DATE.getFullYear(), SYSTEM_DATE.getMonth(), 1); // Year/Month view state
 let chartInstance = null;
@@ -36,7 +36,8 @@ let dateRangeEnd = null;   // null = no end constraint
 document.addEventListener('DOMContentLoaded', () => {
   // Setup default active states in sidebar
   document.getElementById('forex-sub').style.maxHeight = '1000px';
-  document.getElementById('tkq-nested').style.maxHeight = '400px';
+  if (document.getElementById('challenge-nested')) document.getElementById('challenge-nested').style.maxHeight = '400px';
+  if (document.getElementById('tkq-nested')) document.getElementById('tkq-nested').style.maxHeight = '0px';
   
   // Restore sidebar state
   const sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
@@ -107,7 +108,7 @@ function switchAccount(accountId, breadcrumbText) {
   document.getElementById('current-breadcrumb-path').innerHTML = breadcrumbText;
   
   // Update panels visibility
-  const enabledAccounts = ['ftmo-10k', 'ftmo-100k-1', 'the5ers-5k'];
+  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'the5ers-5k'];
   if (enabledAccounts.includes(accountId)) {
     document.getElementById('view-forex-account').style.display = 'flex';
     document.getElementById('view-stock').style.display = 'none';

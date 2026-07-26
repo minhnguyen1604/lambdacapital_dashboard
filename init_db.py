@@ -478,18 +478,19 @@ def update_database_from_excel_files():
         filename = os.path.basename(file_path).lower()
         
         # Mapping filename to database and table
+        is_challenge = 'challenge' in filename
         if '10k' in filename:
             db_name = DB_FTMO
             table_name = 'FTMO_10k'
-            account_id = 'ftmo-10k'
+            account_id = 'challenge-ftmo-10k' if is_challenge else 'ftmo-10k'
         elif '100k' in filename:
             db_name = DB_FTMO
             table_name = 'FTMO_100k_1'
-            account_id = 'ftmo-100k-1'
+            account_id = 'challenge-ftmo-100k-1' if is_challenge else 'ftmo-100k-1'
         elif 'the5ers' in filename or '5ers' in filename:
             db_name = DB_THE5ERS
             table_name = 'the5ers_5k'
-            account_id = 'the5ers-5k'
+            account_id = 'challenge-the5ers-5k' if is_challenge else 'the5ers-5k'
         else:
             print(f"[Bo qua] File '{os.path.basename(file_path)}' khong khop voi tai khoan nao.")
             continue
