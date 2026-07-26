@@ -384,11 +384,12 @@ def save_to_the5ers_db(trades):
         
         insert_data = []
         for t in trades:
-            insert_data.append((
-                'the5ers-5k', t['id'], t['open_time'], t['close_time'], t['direction'],
-                t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
-                t['swap'], t['commission'], t['profit'], t['amount'], t['pips'], t['rr'], t['duration']
-            ))
+            for acc_id in ['the5ers-5k', 'challenge-the5ers-5k']:
+                insert_data.append((
+                    acc_id, t['id'], t['open_time'], t['close_time'], t['direction'],
+                    t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
+                    t['swap'], t['commission'], t['profit'], t['amount'], t['pips'], t['rr'], t['duration']
+                ))
             
         if insert_data:
             cursor.executemany("""

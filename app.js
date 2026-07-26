@@ -108,7 +108,7 @@ function switchAccount(accountId, breadcrumbText) {
   document.getElementById('current-breadcrumb-path').innerHTML = breadcrumbText;
   
   // Update panels visibility
-  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'the5ers-5k'];
+  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'challenge-the5ers-5k'];
   if (enabledAccounts.includes(accountId)) {
     document.getElementById('view-forex-account').style.display = 'flex';
     document.getElementById('view-stock').style.display = 'none';
@@ -127,7 +127,7 @@ function switchAccount(accountId, breadcrumbText) {
     const filterTrigger = document.getElementById('filter-dropdown-trigger');
     if (filterTrigger) filterTrigger.style.display = '';
     
-    if (accountId === 'the5ers-5k') {
+    if (accountId === 'the5ers-5k' || accountId === 'challenge-the5ers-5k') {
       showTokenModal();
     } else {
       // Re-render FTMO
@@ -273,7 +273,7 @@ function restartComingSoonAnimation() {
 
 // --- Data Render Functions ---
 async function renderApp() {
-  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'the5ers-5k'];
+  const enabledAccounts = ['challenge-ftmo-10k', 'challenge-ftmo-100k-1', 'challenge-the5ers-5k'];
   if (activeView !== 'forex-account' || !enabledAccounts.includes(currentAccountId)) return;
   
   try {
