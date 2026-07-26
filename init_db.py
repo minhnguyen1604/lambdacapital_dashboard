@@ -479,33 +479,44 @@ def update_database_from_excel_files():
         
         # Mapping filename to database and table
         is_challenge = 'challenge' in filename
+        target_account_ids = []
         if '10k' in filename:
             db_name = DB_FTMO
             table_name = 'FTMO_10k'
-            account_id = 'challenge-ftmo-10k' if is_challenge else 'ftmo-10k'
+            if is_challenge:
+                target_account_ids = ['challenge-ftmo-10k']
+            else:
+                target_account_ids = ['challenge-ftmo-10k', 'ftmo-10k']
         elif '100k' in filename:
             db_name = DB_FTMO
             table_name = 'FTMO_100k_1'
-            account_id = 'challenge-ftmo-100k-1' if is_challenge else 'ftmo-100k-1'
+            if is_challenge:
+                target_account_ids = ['challenge-ftmo-100k-1']
+            else:
+                target_account_ids = ['challenge-ftmo-100k-1', 'ftmo-100k-1']
         elif 'the5ers' in filename or '5ers' in filename:
             db_name = DB_THE5ERS
             table_name = 'the5ers_5k'
-            account_id = 'challenge-the5ers-5k' if is_challenge else 'the5ers-5k'
+            if is_challenge:
+                target_account_ids = ['challenge-the5ers-5k']
+            else:
+                target_account_ids = ['challenge-the5ers-5k', 'the5ers-5k']
         else:
             print(f"[Bo qua] File '{os.path.basename(file_path)}' khong khop voi tai khoan nao.")
             continue
             
-        print(f"[Doc file] {os.path.basename(file_path)} -> Account: {account_id}")
+        print(f"[Doc file] {os.path.basename(file_path)} -> Account(s): {', '.join(target_account_ids)}")
         file_trades = parse_excel_pure_python(file_path)
         print(f"   -> Tim thay {len(file_trades)} giao dich.")
         
-        for t in file_trades:
-            key = (db_name, table_name, account_id, t['trade_id'])
-            trades_by_key[key] = (
-                account_id, t['trade_id'], t['open_time'], t['close_time'], t['type'],
-                t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
-                t['swap'], t['commission'], t['profit'], t['net_profit'], t['pips'], t['rr'], t['duration']
-            )
+        for acc_id in target_account_ids:
+            for t in file_trades:
+                key = (db_name, table_name, acc_id, t['trade_id'])
+                trades_by_key[key] = (
+                    acc_id, t['trade_id'], t['open_time'], t['close_time'], t['type'],
+                    t['volume'], t['symbol'], t['open_price'], t['close_price'], t['sl'], t['tp'],
+                    t['swap'], t['commission'], t['profit'], t['net_profit'], t['pips'], t['rr'], t['duration']
+                )
 
     # Re-group all trades
     trades_by_table = {}
