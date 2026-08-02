@@ -26,15 +26,31 @@ DB_THE5ERS = DB_THE5ERS_CHALLENGE
 EXCEL_PATH = os.path.join('data', 'FTMO_10k_Challenge.xlsx')
 EXCEL_100K = os.path.join('data', 'FTMO_100k_1_Challenge.xlsx')
 
+# ID tai khoan tren he thong The5ers, dung de goi API /position/all/<id>.
+# Lay tu The5ers Hub: so hien duoi ten tai khoan (vi du "#26533802").
+THE5ERS_ACCOUNT_IDS = {
+    'challenge-the5ers-5k': '25739927',   # $5K High Stakes - Challenge
+    'the5ers-5k':           '26533802',   # $5K High Stakes - Funded
+}
+
+# Anh xa tuong minh account_id -> file Excel du phong.
+# Tranh viec so khop chuoi lam '100k' bi nham thanh '10k'.
+EXCEL_BY_ACCOUNT = {
+    'challenge-ftmo-10k':     os.path.join('data', 'FTMO_10k_Challenge.xlsx'),
+    'challenge-ftmo-100k-1':  os.path.join('data', 'FTMO_100k_1_Challenge.xlsx'),
+    'challenge-the5ers-5k':   os.path.join('data', 'the5ers_5k_Challenge.xlsx'),
+    'ftmo-10k':               os.path.join('data', 'FTMO_10k_Funded.xlsx'),
+    'ftmo-100k-1':            os.path.join('data', 'FTMO_100k_1_Funded.xlsx'),
+    'the5ers-5k':             os.path.join('data', 'the5ers_5k_Funded.xlsx'),
+}
+
 # Fallback mock data for accounts other than ftmo-10k and ftmo-100k-1
 MOCK_TRADES = {
     'ftmo-100k-2': [],
     'ftmo-100k-3': [],
     'ftmo-100k-4': [],
-    'the5ers-5k': [
-        {'id': 20001, 'date': '2026-06-03', 'symbol': 'AUDUSD', 'direction': 'BUY', 'amount': 350.0, 'rr': 3.0, 'duration': 28800},
-        {'id': 20002, 'date': '2026-06-05', 'symbol': 'USDJPY', 'direction': 'SELL', 'amount': -100.0, 'rr': 1.0, 'duration': 7200}
-    ],
+    # 'the5ers-5k' (Funded) da bo du lieu mau: de trong cho den khi co giao dich that
+    'the5ers-5k': [],
     'personal-1': [
         {'id': 30001, 'date': '2026-06-02', 'symbol': 'EURUSD', 'direction': 'BUY', 'amount': 150.0, 'rr': 1.5, 'duration': 12600},
         {'id': 30002, 'date': '2026-06-04', 'symbol': 'XAUUSD', 'direction': 'SELL', 'amount': 80.0, 'rr': 2.0, 'duration': 15300}
@@ -79,12 +95,20 @@ def parse_excel_pure_python(excel_path):
                     r_ref = c.get('r')
                     col_letter = re.sub(r'\d+', '', r_ref)
                     val_type = c.get('t')
-                    v = c.find('ns:v', ns)
-                    val = v.text if v is not None else None
+                    if val_type == 'inlineStr':
+                        # Cell luu chuoi truc tiep trong <is><t> (file do openpyxl ghi ra)
+                        is_node = c.find('ns:is', ns)
+                        t_nodes = is_node.findall('.//ns:t', ns) if is_node is not None else []
+                        val = "".join([t.text for t in t_nodes if t.text]) if t_nodes else None
+                    else:
+                        v = c.find('ns:v', ns)
+                        val = v.text if v is not None else None
                     
                     if val is not None:
                         if val_type == 's':
                             val = shared_strings[int(val)]
+                        elif val_type in ('inlineStr', 'str'):
+                            pass
                         else:
                             try:
                                 if '.' in val:
@@ -335,6 +359,12 @@ def save_to_excel_openpyxl(trades, excel_path):
     ws.append(headers)
     
     for t in trades:
+        # QUAN TRONG - quy uoc cot 'Loi nhuan' phai GIONG file xuat cua FTMO: la loi nhuan GOP.
+        # API The5ers tra ve 'profitAndLoss' da tru swap va phi roi, nen phai cong nguoc lai,
+        # neu khong khi doc lai file (net = loi nhuan + swap + phi) se bi tru hai lan.
+        swap_val = float(t.get('swap') or 0.0)
+        fee_val = float(t.get('commission') or 0.0)
+        gross_profit = round(float(t.get('profit') or 0.0) - swap_val - fee_val, 2)
         ws.append([
             t.get('id'),
             t.get('open_time') or t.get('date'),
@@ -346,9 +376,9 @@ def save_to_excel_openpyxl(trades, excel_path):
             t.get('tp'),
             t.get('close_time') or t.get('date'),
             t.get('close_price'),
-            t.get('swap'),
-            t.get('commission'),
-            t.get('profit'),
+            swap_val,
+            fee_val,
+            gross_profit,
             t.get('pips'),
             t.get('duration')
         ])
@@ -455,6 +485,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         
         trades = []
         db_success = False
+        data_source = 'db'
         
         db_file = DB_PATH
         table_name = 'FTMO_10k'
@@ -521,48 +552,26 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             db_success = False
 
         if not db_success:
-            print(f"DATABASE FALLBACK ACTIVE: Loading data for '{account_id}'...")
-            import glob
-            excel_files = glob.glob(os.path.join('data', '*.xlsx'))
-            matched_file = None
-            is_ch = 'challenge' in account_id
+            print(f"[CANH BAO] Khong doc duoc du lieu tu database cho '{account_id}'. Dang thu doc file Excel...")
+            matched_file = EXCEL_BY_ACCOUNT.get(account_id)
             
-            for ef in excel_files:
-                fn = os.path.basename(ef).lower()
-                if is_ch and 'challenge' not in fn:
-                    continue
-                if not is_ch and 'challenge' in fn:
-                    continue
-                if '10k' in account_id and '10k' in fn:
-                    matched_file = ef
-                    break
-                elif '100k' in account_id and '100k' in fn:
-                    matched_file = ef
-                    break
-                elif 'the5ers' in account_id and ('the5ers' in fn or '5ers' in fn):
-                    matched_file = ef
-                    break
-                    
             if matched_file and os.path.exists(matched_file):
-                raw_trades = parse_excel_pure_python(matched_file)
-                for t in raw_trades:
-                    trades.append({
-                        'id': t['trade_id'],
-                        'date': t['close_time'].split(' ')[0] if t['close_time'] else (t['open_time'].split(' ')[0] if t['open_time'] else None),
-                        'symbol': t['symbol'],
-                        'direction': t['type'].upper() if t['type'] else 'BUY',
-                        'amount': t['net_profit'] or 0.0,
-                        'rr': t['rr'] or 2.0,
-                        'duration': t['duration'] or 0
-                    })
+                # parse_excel_pure_python() da tra ve dung dinh dang ma frontend can
+                trades = parse_excel_pure_python(matched_file)
+                data_source = 'excel'
+                print(f"[CANH BAO] '{account_id}' dang hien thi du lieu tu '{matched_file}', KHONG phai tu database.")
             else:
                 trades = MOCK_TRADES.get(account_id, [])
+                data_source = 'mock' if trades else 'empty'
+                if trades:
+                    print(f"[CANH BAO] '{account_id}' dang hien thi DU LIEU MAU (mock), khong phai giao dich that.")
 
         response_data = json.dumps(trades).encode('utf-8')
         
         self.send_response(200)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', len(response_data))
+        self.send_header('X-Data-Source', data_source)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(response_data)
@@ -783,8 +792,18 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             if not token:
                 raise ValueError("Token is required")
                 
-            # Default account ID from user's Hub request URL
-            account_id = '25739927'
+            # Xac dinh tai khoan dich truoc khi crawl de goi dung ID tren The5ers
+            parsed_url = urllib.parse.urlparse(self.path)
+            query_params = urllib.parse.parse_qs(parsed_url.query)
+            target_acc = query_params.get('account', [payload.get('account', 'challenge-the5ers-5k')])[0]
+            
+            account_id = THE5ERS_ACCOUNT_IDS.get(target_acc)
+            if not account_id:
+                raise ValueError(
+                    f"Chua cau hinh ID The5ers cho tai khoan '{target_acc}'. "
+                    f"Them vao THE5ERS_ACCOUNT_IDS trong server.py."
+                )
+            print(f"Tai khoan dich: {target_acc} -> ID The5ers #{account_id}")
             
             trades = []
             crawled_ids = set()
@@ -843,10 +862,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     
                 page += 1
                 
-            parsed_url = urllib.parse.urlparse(self.path)
-            query_params = urllib.parse.parse_qs(parsed_url.query)
-            target_acc = query_params.get('account', [payload.get('account', 'challenge-the5ers-5k')])[0]
-            
             is_challenge = 'challenge' in target_acc
             excel_filename = 'the5ers_5k_Challenge.xlsx' if is_challenge else 'the5ers_5k_Funded.xlsx'
             db_file = DB_THE5ERS_CHALLENGE if is_challenge else DB_THE5ERS_FUNDED

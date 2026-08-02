@@ -54,12 +54,20 @@ def parse_excel_pure_python(excel_path):
                     r_ref = c.get('r')
                     col_letter = re.sub(r'\d+', '', r_ref)
                     val_type = c.get('t')
-                    v = c.find('ns:v', ns)
-                    val = v.text if v is not None else None
+                    if val_type == 'inlineStr':
+                        # Cell luu chuoi truc tiep trong <is><t> (file do openpyxl ghi ra)
+                        is_node = c.find('ns:is', ns)
+                        t_nodes = is_node.findall('.//ns:t', ns) if is_node is not None else []
+                        val = "".join([t.text for t in t_nodes if t.text]) if t_nodes else None
+                    else:
+                        v = c.find('ns:v', ns)
+                        val = v.text if v is not None else None
                     
                     if val is not None:
                         if val_type == 's':
                             val = shared_strings[int(val)]
+                        elif val_type in ('inlineStr', 'str'):
+                            pass
                         else:
                             try:
                                 if '.' in val:
@@ -252,23 +260,8 @@ def init_database():
         """, insert_100k)
         print(f"Đã nạp {len(insert_100k)} giao dịch của FTMO 100k #1 vào SQLite.")
         
-    # Seed mock data for personal accounts so dashboard is populated if checked
-    print("Nạp dữ liệu mẫu cho các tài khoản FTMO còn lại...")
-    seed_ftmo = [
-        # personal-1
-        ('personal-1', 30001, '2026-06-02 08:30:00', '2026-06-02 12:00:00', 'BUY', 0.1, 'EURUSD', 1.0820, 1.0835, 1.0810, 1.0850, 0.0, -1.00, 151.00, 150.00, 15.0, 1.5, 12600),
-        ('personal-1', 30002, '2026-06-04 13:15:00', '2026-06-04 17:30:00', 'SELL', 0.15, 'XAUUSD', 2310.0, 2305.0, 2312.5, 2300.0, 0.0, -1.50, 81.50, 80.00, 50.0, 2.0, 15300),
-        # personal-2
-        ('personal-2', 40001, '2026-06-03 14:00:00', '2026-06-03 22:00:00', 'SELL', 0.2, 'GBPUSD', 1.2650, 1.2660, 1.2640, 1.2610, 0.0, -2.00, -198.00, -200.00, -10.0, 1.0, 28800),
-        ('personal-2', 40002, '2026-06-06 09:30:00', '2026-06-06 15:45:00', 'BUY', 0.3, 'EURUSD', 1.0850, 1.0865, 1.0835, 1.0895, 0.0, -3.00, 453.00, 450.00, 15.0, 2.2, 22500)
-    ]
-    cursor.executemany("""
-        INSERT INTO FTMO_10k (
-            account_id, trade_id, open_time, close_time, type,
-            volume, symbol, open_price, close_price, sl, tp,
-            swap, commission, profit, net_profit, pips, rr, duration
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, seed_ftmo)
+    # Da bo seed du lieu mau cho personal-1/personal-2:
+    # du lieu gia khong duoc phep nam trong database that.
     
     conn.commit()
     conn.close()
@@ -307,19 +300,8 @@ def init_database():
         )
     """)
     
-    # Seed mock data for the5ers-5k so it has default data if user skips token update
-    print("Nạp dữ liệu mẫu mặc định cho The5ers 5k...")
-    seed_5ers = [
-        ('the5ers-5k', 20001, '2026-06-03 08:00:00', '2026-06-03 16:00:00', 'BUY', 0.1, 'AUDUSD', 0.6500, 0.6535, 0.6480, 0.6560, 0.0, -1.00, 351.00, 350.00, 35.0, 3.0, 28800),
-        ('the5ers-5k', 20002, '2026-06-05 11:00:00', '2026-06-05 13:00:00', 'SELL', 0.2, 'USDJPY', 155.00, 155.50, 154.50, 153.50, 0.0, -2.00, -98.00, -100.00, -50.0, 1.0, 7200)
-    ]
-    cursor_5.executemany("""
-        INSERT INTO the5ers_5k (
-            account_id, trade_id, open_time, close_time, type,
-            volume, symbol, open_price, close_price, sl, tp,
-            swap, commission, profit, net_profit, pips, rr, duration
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, seed_5ers)
+    # Da bo seed du lieu mau cho The5ers 5k (AUDUSD +350 / USDJPY -100).
+    # Tai khoan chua co giao dich thi phai hien thi 0, khong duoc hien so gia.
     
     conn_5.commit()
     conn_5.close()
@@ -461,29 +443,26 @@ def update_database_from_excel_files():
         
         target_mappings = []
         if is_challenge:
-            if '10k' in filename:
-                target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_10k', 'challenge-ftmo-10k'))
-            elif '100k' in filename:
+            if '100k' in filename:
                 target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_100k_1', 'challenge-ftmo-100k-1'))
+            elif '10k' in filename:
+                target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_10k', 'challenge-ftmo-10k'))
             elif 'the5ers' in filename or '5ers' in filename:
                 target_mappings.append((DB_THE5ERS_CHALLENGE, 'the5ers_5k', 'challenge-the5ers-5k'))
-        else: # Funded or generic filename
-            if '10k' in filename:
-                target_mappings.append((DB_FTMO_FUNDED, 'FTMO_10k', 'ftmo-10k'))
-                # If no separate challenge file exists, also populate challenge
-                if not any('10k' in os.path.basename(f).lower() and 'challenge' in os.path.basename(f).lower() for f in excel_files):
-                    target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_10k', 'challenge-ftmo-10k'))
-            elif '100k' in filename:
+        elif is_funded:
+            if '100k' in filename:
                 target_mappings.append((DB_FTMO_FUNDED, 'FTMO_100k_1', 'ftmo-100k-1'))
-                if not any('100k' in os.path.basename(f).lower() and 'challenge' in os.path.basename(f).lower() for f in excel_files):
-                    target_mappings.append((DB_FTMO_CHALLENGE, 'FTMO_100k_1', 'challenge-ftmo-100k-1'))
+            elif '10k' in filename:
+                target_mappings.append((DB_FTMO_FUNDED, 'FTMO_10k', 'ftmo-10k'))
             elif 'the5ers' in filename or '5ers' in filename:
                 target_mappings.append((DB_THE5ERS_FUNDED, 'the5ers_5k', 'the5ers-5k'))
-                if not any(('the5ers' in os.path.basename(f).lower() or '5ers' in os.path.basename(f).lower()) and 'challenge' in os.path.basename(f).lower() for f in excel_files):
-                    target_mappings.append((DB_THE5ERS_CHALLENGE, 'the5ers_5k', 'challenge-the5ers-5k'))
             else:
                 print(f"[Bo qua] File '{os.path.basename(file_path)}' khong khop voi tai khoan nao.")
                 continue
+        else:
+            # Ten file khong ghi ro Challenge hay Funded -> khong doan bua, tranh gan nham tai khoan
+            print(f"[Bo qua] File '{os.path.basename(file_path)}' khong ghi ro 'Challenge' hay 'Funded' trong ten. Doi ten file de he thong nhan dien.")
+            continue
             
         print(f"[Doc file] {os.path.basename(file_path)} -> Target(s): {[m[2] for m in target_mappings]}")
         file_trades = parse_excel_pure_python(file_path)
@@ -526,54 +505,6 @@ def update_database_from_excel_files():
         except Exception as e:
             print(f"[Loi] Khong the ghi du lieu vao database '{db_name}' bang '{table_name}': {e}")
             
-    # Ensure personal accounts mock data exists in FTMO_10k
-    try:
-        conn = sqlite3.connect(DB_FTMO)
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM FTMO_10k WHERE account_id LIKE 'personal-%'")
-        if cursor.fetchone()[0] == 0:
-            print("[Seed] Dang nap du lieu mau cho personal-1 va personal-2...")
-            seed_ftmo = [
-                ('personal-1', 30001, '2026-06-02 08:30:00', '2026-06-02 12:00:00', 'BUY', 0.1, 'EURUSD', 1.0820, 1.0835, 1.0810, 1.0850, 0.0, -1.00, 151.00, 150.00, 15.0, 1.5, 12600),
-                ('personal-1', 30002, '2026-06-04 13:15:00', '2026-06-04 17:30:00', 'SELL', 0.15, 'XAUUSD', 2310.0, 2305.0, 2312.5, 2300.0, 0.0, -1.50, 81.50, 80.00, 50.0, 2.0, 15300),
-                ('personal-2', 40001, '2026-06-03 14:00:00', '2026-06-03 22:00:00', 'SELL', 0.2, 'GBPUSD', 1.2650, 1.2660, 1.2640, 1.2610, 0.0, -2.00, -198.00, -200.00, -10.0, 1.0, 28800),
-                ('personal-2', 40002, '2026-06-06 09:30:00', '2026-06-06 15:45:00', 'BUY', 0.3, 'EURUSD', 1.0850, 1.0865, 1.0835, 1.0895, 0.0, -3.00, 453.00, 450.00, 15.0, 2.2, 22500)
-            ]
-            cursor.executemany("""
-                INSERT INTO FTMO_10k (
-                    account_id, trade_id, open_time, close_time, type,
-                    volume, symbol, open_price, close_price, sl, tp,
-                    swap, commission, profit, net_profit, pips, rr, duration
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, seed_ftmo)
-            conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"[Canh bao] Khong the seed du lieu personal: {e}")
-        
-    # Ensure default mock data for the5ers if table is empty
-    try:
-        conn = sqlite3.connect(DB_THE5ERS)
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM the5ers_5k")
-        if cursor.fetchone()[0] == 0:
-            print("[Seed] Dang nap du lieu mau mac dinh cho the5ers-5k...")
-            seed_5ers = [
-                ('the5ers-5k', 20001, '2026-06-03 08:00:00', '2026-06-03 16:00:00', 'BUY', 0.1, 'AUDUSD', 0.6500, 0.6535, 0.6480, 0.6560, 0.0, -1.00, 351.00, 350.00, 35.0, 3.0, 28800),
-                ('the5ers-5k', 20002, '2026-06-05 11:00:00', '2026-06-05 13:00:00', 'SELL', 0.2, 'USDJPY', 155.00, 155.50, 154.50, 153.50, 0.0, -2.00, -98.00, -100.00, -50.0, 1.0, 7200)
-            ]
-            cursor.executemany("""
-                INSERT INTO the5ers_5k (
-                    account_id, trade_id, open_time, close_time, type,
-                    volume, symbol, open_price, close_price, sl, tp,
-                    swap, commission, profit, net_profit, pips, rr, duration
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, seed_5ers)
-            conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"[Canh bao] Khong the seed du lieu the5ers: {e}")
-        
     print("===================================================")
     print("   [He thong] Da hoan tat cap nhat du lieu!")
     print("===================================================")

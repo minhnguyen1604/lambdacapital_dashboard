@@ -6,3 +6,18 @@ node_modules/
 .vscode/
 __pycache__/
 *.pyc
+
+# --- Du lieu giao dich ca nhan: KHONG day len repo ---
+FTMO
+FTMO_Challenge
+FTMO_Funded
+the5ers
+the5ers_Challenge
+the5ers_Funded
+*-journal
+data/*.xlsx
+data/*.csv
+
+# --- Thu muc tam / sao luu ---
+_backup_*/
+_legacy/
