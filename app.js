@@ -444,6 +444,162 @@ function renderAppFiltered() {
   
   // Render Calendar (remains separate, showing all trades for the active calendar month)
   renderCalendar(currentAccountTrades);
+  
+  // Render Day-of-Week & Duration Cycle Analysis
+  renderCycleAnalysis(filteredTrades);
+}
+
+function renderCycleAnalysis(trades) {
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  
+  const parseDayOfWeek = (timeStr) => {
+    if (!timeStr) return null;
+    const d = new Date(timeStr);
+    if (isNaN(d.getTime())) return null;
+    const day = d.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+    if (day >= 1 && day <= 5) return day - 1; // 0..4 for Mon..Fri
+    return null;
+  };
+
+  const entryStats = [0, 1, 2, 3, 4].map(() => ({ count: 0, wins: 0, profit: 0 }));
+  const exitStats = [0, 1, 2, 3, 4].map(() => ({ count: 0, wins: 0, profit: 0 }));
+  
+  const matrix = Array.from({ length: 5 }, () =>
+    Array.from({ length: 5 }, () => ({ count: 0, wins: 0, profit: 0 }))
+  );
+
+  const durationBuckets = [
+    { label: 'Intraday (< 24h)', minSec: 0, maxSec: 86400, count: 0, wins: 0, profit: 0 },
+    { label: '1 Day (24h - 48h)', minSec: 86400, maxSec: 172800, count: 0, wins: 0, profit: 0 },
+    { label: '2 Days (48h - 72h)', minSec: 172800, maxSec: 259200, count: 0, wins: 0, profit: 0 },
+    { label: '3+ Days (> 72h)', minSec: 259200, maxSec: Infinity, count: 0, wins: 0, profit: 0 }
+  ];
+
+  trades.forEach(t => {
+    const entryDayIdx = parseDayOfWeek(t.open_time || t.date);
+    const exitDayIdx = parseDayOfWeek(t.close_time || t.date);
+    const pnl = t.amount || 0;
+    const isWin = pnl > 0;
+    const durSec = t.duration || 0;
+
+    if (entryDayIdx !== null) {
+      entryStats[entryDayIdx].count++;
+      if (isWin) entryStats[entryDayIdx].wins++;
+      entryStats[entryDayIdx].profit += pnl;
+    }
+
+    if (exitDayIdx !== null) {
+      exitStats[exitDayIdx].count++;
+      if (isWin) exitStats[exitDayIdx].wins++;
+      exitStats[exitDayIdx].profit += pnl;
+    }
+
+    if (entryDayIdx !== null && exitDayIdx !== null) {
+      matrix[entryDayIdx][exitDayIdx].count++;
+      if (isWin) matrix[entryDayIdx][exitDayIdx].wins++;
+      matrix[entryDayIdx][exitDayIdx].profit += pnl;
+    }
+
+    durationBuckets.forEach(b => {
+      if (durSec >= b.minSec && durSec < b.maxSec) {
+        b.count++;
+        if (isWin) b.wins++;
+        b.profit += pnl;
+      }
+    });
+  });
+
+  const entryListEl = document.getElementById('entry-day-list');
+  if (entryListEl) {
+    entryListEl.innerHTML = dayNames.map((day, idx) => {
+      const s = entryStats[idx];
+      const winRate = s.count > 0 ? (s.wins / s.count) * 100 : 0;
+      const profitClass = s.profit >= 0 ? 'color: #059669;' : 'color: #e11d48;';
+      const profitSign = s.profit >= 0 ? '+' : '';
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(0,0,0,0.02); border-radius: 6px; font-size: 0.78rem;">
+          <div style="font-weight: 600; width: 80px;">${day}</div>
+          <div style="color: var(--text-muted); text-align: center; width: 60px;">${s.count} trades</div>
+          <div style="font-weight: 600; width: 70px; text-align: right;">${winRate.toFixed(0)}% WR</div>
+          <div style="font-weight: 700; width: 90px; text-align: right; ${profitClass}">${profitSign}${formatCurrency(s.profit)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const exitListEl = document.getElementById('exit-day-list');
+  if (exitListEl) {
+    exitListEl.innerHTML = dayNames.map((day, idx) => {
+      const s = exitStats[idx];
+      const winRate = s.count > 0 ? (s.wins / s.count) * 100 : 0;
+      const profitClass = s.profit >= 0 ? 'color: #059669;' : 'color: #e11d48;';
+      const profitSign = s.profit >= 0 ? '+' : '';
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(0,0,0,0.02); border-radius: 6px; font-size: 0.78rem;">
+          <div style="font-weight: 600; width: 80px;">${day}</div>
+          <div style="color: var(--text-muted); text-align: center; width: 60px;">${s.count} trades</div>
+          <div style="font-weight: 600; width: 70px; text-align: right;">${winRate.toFixed(0)}% WR</div>
+          <div style="font-weight: 700; width: 90px; text-align: right; ${profitClass}">${profitSign}${formatCurrency(s.profit)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const bucketListEl = document.getElementById('duration-bucket-list');
+  if (bucketListEl) {
+    bucketListEl.innerHTML = durationBuckets.map(b => {
+      const winRate = b.count > 0 ? (b.wins / b.count) * 100 : 0;
+      const profitClass = b.profit >= 0 ? 'color: #059669;' : 'color: #e11d48;';
+      const profitSign = b.profit >= 0 ? '+' : '';
+      return `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(0,0,0,0.02); border-radius: 6px; font-size: 0.78rem;">
+          <div style="font-weight: 600; width: 110px;">${b.label}</div>
+          <div style="color: var(--text-muted); text-align: center; width: 50px;">${b.count} t</div>
+          <div style="font-weight: 600; width: 65px; text-align: right;">${winRate.toFixed(0)}% WR</div>
+          <div style="font-weight: 700; width: 85px; text-align: right; ${profitClass}">${profitSign}${formatCurrency(b.profit)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const matrixBodyEl = document.getElementById('entry-exit-matrix-body');
+  if (matrixBodyEl) {
+    matrixBodyEl.innerHTML = dayNames.map((eDay, eIdx) => {
+      const cellsHtml = dayNames.map((xDay, xIdx) => {
+        const cell = matrix[eIdx][xIdx];
+        if (cell.count === 0) {
+          return `
+            <td style="padding: 10px; background: rgba(100, 116, 139, 0.04); border-radius: 6px; color: var(--text-muted); font-size: 0.75rem;">
+              -
+            </td>
+          `;
+        }
+        const winRate = (cell.wins / cell.count) * 100;
+        const isPositive = cell.profit >= 0;
+        const bgStyle = isPositive
+          ? 'background: rgba(5, 150, 105, 0.12); border: 1px solid rgba(5, 150, 105, 0.3);'
+          : 'background: rgba(225, 29, 72, 0.12); border: 1px solid rgba(225, 29, 72, 0.3);';
+        const textColor = isPositive ? '#047857' : '#be123c';
+        const sign = isPositive ? '+' : '';
+
+        return `
+          <td style="padding: 10px 6px; ${bgStyle} border-radius: 6px; transition: transform 0.2s ease;">
+            <div style="font-size: 0.85rem; font-weight: 800; color: ${textColor};">${sign}${formatCurrency(cell.profit)}</div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">
+              ${winRate.toFixed(0)}% WR <span style="opacity: 0.7;">(${cell.count})</span>
+            </div>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="text-align: left; font-weight: 700; font-size: 0.8rem; padding: 10px; color: var(--text-primary);">${eDay}</td>
+          ${cellsHtml}
+        </tr>
+      `;
+    }).join('');
+  }
 }
 
 function calculateKPIs(initialCapital, trades) {

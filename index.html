@@ -536,6 +536,79 @@
               </div>
             </div>
           </section>
+
+          <!-- Day-of-Week & Duration Cycle Analysis Section -->
+          <section class="cycle-analysis-panel" style="margin-top: 24px; display: flex; flex-direction: column; gap: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 12px;">
+              <div>
+                <h2 class="panel-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">Day-of-Week & Duration Cycle Analysis</h2>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Comprehensive analysis for multi-day holding periods & entry/exit days</div>
+              </div>
+            </div>
+
+            <!-- Top Cards Grid: Entry Day, Exit Day, Hold Duration Buckets -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+              <!-- Entry Day Breakdown Card -->
+              <section class="chart-panel" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between;">
+                  <span>Entry Day Performance</span>
+                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">When position opened</span>
+                </div>
+                <div id="entry-day-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+              </section>
+
+              <!-- Exit Day Breakdown Card -->
+              <section class="chart-panel" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between;">
+                  <span>Exit Day Performance</span>
+                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">When position closed</span>
+                </div>
+                <div id="exit-day-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+              </section>
+
+              <!-- Hold Duration Buckets Card -->
+              <section class="chart-panel" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between;">
+                  <span>Hold Duration Buckets</span>
+                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Holding time length</span>
+                </div>
+                <div id="duration-bucket-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+              </section>
+            </div>
+
+            <!-- Bottom Matrix: Entry -> Exit Day Heatmap -->
+            <section class="chart-panel" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);">Entry &rarr; Exit Holding Matrix</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Net PnL & Win Rate for multi-day holding paths (Entry Day vs Exit Day)</div>
+                </div>
+                <div style="display: flex; gap: 14px; font-size: 0.72rem;">
+                  <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: rgba(5, 150, 105, 0.15); border: 1px solid #059669;"></span> Profit</span>
+                  <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: rgba(225, 29, 72, 0.15); border: 1px solid #e11d48;"></span> Loss</span>
+                  <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; border-radius: 3px; background: rgba(100, 116, 139, 0.1); border: 1px solid var(--border-light);"></span> No Trades</span>
+                </div>
+              </div>
+
+              <div style="overflow-x: auto;">
+                <table class="metrics-table" id="entry-exit-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 6px; text-align: center;">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left; padding: 10px; font-size: 0.8rem; color: var(--text-muted);">Entry \ Exit</th>
+                      <th style="padding: 10px; font-size: 0.8rem; width: 18%;">Monday</th>
+                      <th style="padding: 10px; font-size: 0.8rem; width: 18%;">Tuesday</th>
+                      <th style="padding: 10px; font-size: 0.8rem; width: 18%;">Wednesday</th>
+                      <th style="padding: 10px; font-size: 0.8rem; width: 18%;">Thursday</th>
+                      <th style="padding: 10px; font-size: 0.8rem; width: 18%;">Friday</th>
+                    </tr>
+                  </thead>
+                  <tbody id="entry-exit-matrix-body">
+                    <!-- Dynamic matrix rows generated by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
           
         </div>
         
@@ -788,6 +861,6 @@
   </div>
 
   <!-- Main JavaScript App Logic -->
-  <script src="app.js?v=20260803_v1"></script>
+  <script src="app.js?v=20260803_v2"></script>
 </body>
 </html>

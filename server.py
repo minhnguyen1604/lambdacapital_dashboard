@@ -537,6 +537,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     trades.append({
                         'id': row['trade_id'] or row['id'],
                         'date': trade_date,
+                        'open_time': open_time,
+                        'close_time': close_time,
                         'symbol': row['symbol'],
                         'direction': row['type'].upper() if row['type'] else 'BUY',
                         'amount': row['net_profit'] or 0.0,
