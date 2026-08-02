@@ -591,6 +591,31 @@ function calculateKPIs(initialCapital, trades) {
   });
   const concentration = profit > 0 ? (maxWin / profit) * 100 : 0;
 
+  // 7. System Quality Number (SQN by Van Tharp)
+  let sqnScore = 0;
+  let sqnText = 'N/A';
+  let sqnRating = '';
+  if (totalTrades > 1 && avgLoss > 0) {
+    const rMultiples = trades.map(t => t.amount / avgLoss);
+    const meanR = rMultiples.reduce((acc, val) => acc + val, 0) / totalTrades;
+    const rVariance = rMultiples.reduce((acc, val) => acc + Math.pow(val - meanR, 2), 0) / (totalTrades - 1);
+    const rStdDev = Math.sqrt(rVariance);
+    
+    if (rStdDev > 0) {
+      const N_capped = Math.min(totalTrades, 100);
+      sqnScore = Math.sqrt(N_capped) * (meanR / rStdDev);
+      
+      if (sqnScore >= 5.0) sqnRating = 'Holy Grail';
+      else if (sqnScore >= 3.0) sqnRating = 'Superb';
+      else if (sqnScore >= 2.5) sqnRating = 'Excellent';
+      else if (sqnScore >= 2.0) sqnRating = 'Good';
+      else if (sqnScore >= 1.6) sqnRating = 'Average';
+      else sqnRating = 'Poor';
+      
+      sqnText = `${sqnScore.toFixed(2)} (${sqnRating})`;
+    }
+  }
+
   // Group trades by date for daily profit/loss calculation (Max Daily Loss)
   const dailyProfits = {};
   trades.forEach(t => {
@@ -643,6 +668,9 @@ function calculateKPIs(initialCapital, trades) {
     recoveryFactor,
     kellyPercent,
     sharpeRatio,
+    sqnScore,
+    sqnText,
+    sqnRating,
     longWinRate,
     shortWinRate,
     holdRatio,
@@ -777,6 +805,12 @@ function updateKPIDom(stats) {
   document.getElementById('kpi-sharpe').innerText = stats.totalTrades > 1 && stats.sharpeRatio > 0 
     ? stats.sharpeRatio.toFixed(2) 
     : 'N/A';
+
+  // 20b. SQN (System Quality Number)
+  const sqnEl = document.getElementById('kpi-sqn');
+  if (sqnEl) {
+    sqnEl.innerText = stats.sqnText || 'N/A';
+  }
 
   // 21. Long / Short Win Rate
   document.getElementById('kpi-long-short-wr').innerText = `${stats.longWinRate.toFixed(0)}% / ${stats.shortWinRate.toFixed(0)}%`;
