@@ -79,7 +79,7 @@ function toggleNavGroup(id) {
     element.style.maxHeight = '0px';
     if (trigger) trigger.classList.add('collapsed');
   } else {
-    element.style.maxHeight = '400px';
+    element.style.maxHeight = '1000px';
     if (trigger) trigger.classList.remove('collapsed');
   }
 }
